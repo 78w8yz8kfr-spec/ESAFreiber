@@ -1,11 +1,11 @@
-# Baustellenarbeit: Aufgaben, Material und Berichte
+# Baustellenarbeit: Aufgaben, Notizen, Material und Berichte
 
 Stand: 26.07.2026
-Technischer Stand: V0.23.0
+Technischer Stand: V0.25.0
 
 ## Bedienkonzept
 
-Die Baustelle bleibt der Arbeitsort. Aufgaben, Material und Berichte erscheinen
+Die Baustelle bleibt der Arbeitsort. Aufgaben, Notizen, Material und Berichte erscheinen
 deshalb ausschließlich als ruhige, aufklappbare Themenbereiche im
 Baustellen-Dashboard. Es gibt keine globale Aktivitätschronik und keine
 zusätzlichen Hauptmenüpunkte.
@@ -24,7 +24,7 @@ Die Oberfläche folgt den festgelegten Gestaltungsregeln:
 
 Der Details-Knopf des aktuellen Tageseinsatzes öffnet die Baustelle als eigenen
 Arbeitsbereich. Arbeitsauftrag und Navigation stehen zuerst; darunter folgen
-sichtbare, getrennte Karten für Mitarbeiter, Aufgaben, Berichte, Dokumente,
+sichtbare, getrennte Karten für Mitarbeiter, Aufgaben, Notizen, Berichte, Dokumente,
 Fotos und Material. Die Ansicht ist keine chronologische Pinnwand und erzeugt
 keinen zusätzlichen Hauptmenüpunkt.
 
@@ -52,6 +52,18 @@ optional `archived`. Beim Abschluss setzt PostgreSQL den Abschlusszeitpunkt.
 enthält Bezeichnung, Menge, Einheit, Hinweis und den Stand `planned`, `ordered`,
 `available`, `used` oder `archived`. Die mobile Oberfläche führt schrittweise
 von „Benötigt“ über „Bestellt“ und „Vor Ort“ bis „Verbraucht“.
+
+## Notizen
+
+`site_notes` speichert kurze Baustellenhinweise bis 2.000 Zeichen mit Verfasser,
+Erstellungszeitpunkt und optionaler Wichtig-Markierung. Büro und berechtigt
+eingeplante Mitarbeiter verwenden denselben Bestand. Die Darstellung bleibt
+ein ruhiger Themenbereich innerhalb der Baustelle und wird nicht zu einer
+globalen oder chronologischen Aktivitätsansicht.
+
+Eine vom Client erzeugte UUID macht wiederholtes Absenden idempotent.
+Notizinhalte bleiben nach dem Speichern unverändert; für spätere Bereinigung ist
+eine nachvollziehbare Archivierung vorbereitet. Hartes Löschen ist gesperrt.
 
 ## Baustellenfotos
 
@@ -93,7 +105,7 @@ keine Dokumentkopie.
   vorhanden sein.
 - Fremde Dokumente oder Dokumente einer anderen Baustelle werden abgewiesen.
 - RLS, zusammengesetzte Fremdschlüssel, Versionsprüfung und Löschschutz gelten
-  für alle drei Module.
+  für alle Baustellenmodule.
 
 ## Freigabe und Abschluss-PDF
 

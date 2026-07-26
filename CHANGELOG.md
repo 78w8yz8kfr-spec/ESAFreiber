@@ -4,6 +4,14 @@ Alle wesentlichen Änderungen an Schäfchen werden in dieser Datei dokumentiert.
 
 ## [Unreleased]
 
+### V0.25.0 – Gemeinsame Baustellennotizen
+
+- eigener ruhiger Notizbereich direkt in jeder Baustelle statt einer globalen Aktivitätschronik
+- Büro und berechtigt eingeplante Mitarbeiter lesen denselben mandantengetrennten Notizbestand
+- kurze Hinweise können als wichtig markiert und mit Verfasser sowie Zeitpunkt angezeigt werden
+- idempotente Speicherung verhindert doppelte Notizen bei wiederholtem Absenden
+- Migration 028, RLS, Löschschutz sowie erweiterte SQL-, API-, PostgreSQL- und PWA-Tests
+
 ### V0.24.0 – Mehrere Arbeitsblöcke pro Tag
 
 - nach Feierabend kann derselbe Arbeitstag mit einer großen Schaltfläche erneut gestartet werden

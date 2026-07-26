@@ -51,6 +51,7 @@ import {
   validateProjectUpdate,
   validateSiteMaterial,
   validateSiteMaterialUpdate,
+  validateSiteNote,
   validateMobileSiteReport,
   validateSiteReport,
   validateSiteReportFinalization,
@@ -505,6 +506,21 @@ function siteMaterialDto(row) {
   };
 }
 
+function siteNoteDto(row) {
+  return {
+    id: row.id,
+    constructionSiteId: row.construction_site_id,
+    clientNoteId: row.client_note_id,
+    content: row.content,
+    isImportant: row.is_important,
+    status: row.status,
+    authorUserId: row.author_user_id,
+    authorName: row.author_name,
+    rowVersion: Number(row.row_version),
+    createdAt: new Date(row.created_at).toISOString()
+  };
+}
+
 function siteReportDto(row) {
   return {
     id: row.id,
@@ -582,6 +598,7 @@ async function adminOverview(client, context, date) {
     documentResult,
     taskResult,
     materialResult,
+    noteResult,
     reportResult
   ] = await Promise.all([
     client.query(
@@ -746,6 +763,19 @@ async function adminOverview(client, context, date) {
       [context.companyId]
     ),
     client.query(
+      `SELECT note.id, note.construction_site_id, note.author_user_id,
+              note.client_note_id, note.content, note.is_important,
+              note.status, note.row_version, note.created_at,
+              author.first_name || ' ' || author.last_name AS author_name
+       FROM site_notes AS note
+       JOIN users AS author
+         ON author.company_id = note.company_id AND author.id = note.author_user_id
+       WHERE note.company_id = $1
+       ORDER BY CASE note.status WHEN 'active' THEN 1 ELSE 2 END,
+                note.is_important DESC, note.created_at DESC`,
+      [context.companyId]
+    ),
+    client.query(
       `SELECT report.id, report.construction_site_id, report.report_number,
               report.report_type, report.work_date, report.source_mode,
               report.summary, report.details, report.structured_data, report.source_document_id,
@@ -796,6 +826,7 @@ async function adminOverview(client, context, date) {
     documents: documentResult.rows.map(documentDto),
     siteTasks: taskResult.rows.map(siteTaskDto),
     siteMaterials: materialResult.rows.map(siteMaterialDto),
+    siteNotes: noteResult.rows.map(siteNoteDto),
     siteReports: reportResult.rows.map(siteReportDto),
     assignments: weekAssignments.filter((assignment) => assignment.workDate === date),
     weekAssignments
@@ -862,7 +893,7 @@ async function getSiteWorkspace(client, context, constructionSiteId, date) {
   }
 
   const access = await requireSiteWorkspaceAccess(client, context, constructionSiteId, date);
-  const [teamResult, documentResult, taskResult, materialResult, reportResult] = await Promise.all([
+  const [teamResult, documentResult, taskResult, materialResult, noteResult, reportResult] = await Promise.all([
     client.query(
       `SELECT account.id, account.first_name, account.last_name,
               BOOL_OR(assignment.report_responsible) AS report_responsible,
@@ -939,6 +970,20 @@ async function getSiteWorkspace(client, context, constructionSiteId, date) {
       [context.companyId, constructionSiteId]
     ),
     client.query(
+      `SELECT note.id, note.construction_site_id, note.author_user_id,
+              note.client_note_id, note.content, note.is_important,
+              note.status, note.row_version, note.created_at,
+              author.first_name || ' ' || author.last_name AS author_name
+       FROM site_notes AS note
+       JOIN users AS author
+         ON author.company_id = note.company_id AND author.id = note.author_user_id
+       WHERE note.company_id = $1
+         AND note.construction_site_id = $2
+         AND note.status = 'active'
+       ORDER BY note.is_important DESC, note.created_at DESC`,
+      [context.companyId, constructionSiteId]
+    ),
+    client.query(
       `SELECT report.id, report.construction_site_id, report.report_number,
               report.report_type, report.work_date, report.source_mode,
               report.summary, report.details, report.structured_data, report.source_document_id,
@@ -988,6 +1033,7 @@ async function getSiteWorkspace(client, context, constructionSiteId, date) {
     documents: documentResult.rows.map(siteWorkspaceDocumentDto),
     tasks: taskResult.rows.map(siteTaskDto),
     materials: materialResult.rows.map(siteMaterialDto),
+    notes: noteResult.rows.map(siteNoteDto),
     reports: reportResult.rows.map(siteReportDto)
   };
 }
@@ -1367,6 +1413,81 @@ async function updateSiteMaterial(client, context, materialId, input) {
   );
   if (result.rowCount !== 1) throw new InputError("Der Materialeintrag wurde geändert. Bitte neu laden.", 409, "row_version_conflict");
   return getSiteMaterialRecord(client, context, materialId);
+}
+
+async function getSiteNoteRecord(client, context, noteId) {
+  const result = await client.query(
+    `SELECT note.id, note.construction_site_id, note.author_user_id,
+            note.client_note_id, note.content, note.is_important,
+            note.status, note.row_version, note.created_at,
+            author.first_name || ' ' || author.last_name AS author_name
+     FROM site_notes AS note
+     JOIN users AS author
+       ON author.company_id = note.company_id AND author.id = note.author_user_id
+     WHERE note.company_id = $1 AND note.id = $2`,
+    [context.companyId, noteId]
+  );
+  if (result.rowCount !== 1) {
+    throw new InputError("Die Baustellennotiz wurde nicht gefunden.", 404, "site_note_not_found");
+  }
+  return siteNoteDto(result.rows[0]);
+}
+
+async function storeSiteNote(client, context, input) {
+  const inserted = await client.query(
+    `INSERT INTO site_notes (
+       company_id, construction_site_id, author_user_id, client_note_id,
+       content, is_important
+     ) VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (company_id, author_user_id, client_note_id) DO NOTHING
+     RETURNING id`,
+    [
+      context.companyId,
+      input.constructionSiteId,
+      context.userId,
+      input.clientNoteId,
+      input.content,
+      input.isImportant
+    ]
+  );
+  if (inserted.rowCount === 0) {
+    const duplicate = await client.query(
+      `SELECT id, construction_site_id, content, is_important
+       FROM site_notes
+       WHERE company_id = $1 AND author_user_id = $2 AND client_note_id = $3`,
+      [context.companyId, context.userId, input.clientNoteId]
+    );
+    const row = duplicate.rows[0];
+    if (
+      !row
+      || row.construction_site_id !== input.constructionSiteId
+      || row.content !== input.content
+      || row.is_important !== input.isImportant
+    ) {
+      throw new InputError(
+        "Die Notiz-ID wurde bereits für einen anderen Inhalt verwendet.",
+        409,
+        "idempotency_conflict"
+      );
+    }
+    return { siteNote: await getSiteNoteRecord(client, context, row.id), idempotent: true };
+  }
+  return {
+    siteNote: await getSiteNoteRecord(client, context, inserted.rows[0].id),
+    idempotent: false
+  };
+}
+
+async function createAdminSiteNote(client, context, input) {
+  await requirePlanner(client, context);
+  await requireActiveSite(client, context, input.constructionSiteId);
+  return storeSiteNote(client, context, input);
+}
+
+async function createMobileSiteNote(client, context, input, date) {
+  await requireSiteWorkspaceAccess(client, context, input.constructionSiteId, date);
+  await requireActiveSite(client, context, input.constructionSiteId);
+  return storeSiteNote(client, context, input);
 }
 
 async function getSiteReportRecord(client, context, reportId) {
@@ -3413,6 +3534,24 @@ export function createApp({ pool, config, limiter = new LoginRateLimiter(), logg
         return json(response, 200, { dashboard });
       }
 
+      const siteNoteMatch = /^\/api\/v1\/construction-sites\/([^/]+)\/notes$/.exec(url.pathname);
+      if (request.method === "POST" && siteNoteMatch) {
+        const constructionSiteId = validateId(siteNoteMatch[1], "Baustellen-ID");
+        const date = validateWorkDate(
+          url.searchParams.get("date") || localDate(new Date().toISOString(), config.timeZone)
+        );
+        const input = validateSiteNote({
+          ...await readJson(request),
+          constructionSiteId
+        });
+        const result = await withReadySession(
+          pool,
+          tokenHash,
+          (client, context) => createMobileSiteNote(client, context, input, date)
+        );
+        return json(response, result.idempotent ? 200 : 201, { siteNote: result.siteNote });
+      }
+
       const sitePhotoMatch = /^\/api\/v1\/construction-sites\/([^/]+)\/photos$/.exec(url.pathname);
       if (request.method === "POST" && sitePhotoMatch) {
         const constructionSiteId = validateId(sitePhotoMatch[1], "Baustellen-ID");
@@ -3465,6 +3604,16 @@ export function createApp({ pool, config, limiter = new LoginRateLimiter(), logg
           (client, context) => adminOverview(client, context, date)
         );
         return json(response, 200, { overview });
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/v1/admin/site-notes") {
+        const input = validateSiteNote(await readJson(request));
+        const result = await withReadySession(
+          pool,
+          tokenHash,
+          (client, context) => createAdminSiteNote(client, context, input)
+        );
+        return json(response, result.idempotent ? 200 : 201, { siteNote: result.siteNote });
       }
 
       if (request.method === "POST" && url.pathname === "/api/v1/admin/site-tasks") {

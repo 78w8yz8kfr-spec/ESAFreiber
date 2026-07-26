@@ -1,7 +1,7 @@
 # API-Sicherheitsgrenze
 
 Stand: 26.07.2026
-Technischer Stand: V0.24.0
+Technischer Stand: V0.25.0
 
 Die API ist die einzige erlaubte Verbindung zwischen PWA und PostgreSQL. Die
 öffentliche GitHub-Pages-Adresse bleibt eine lokale Demo. Im Online-Betrieb
@@ -69,9 +69,11 @@ API setzt beide Werte ausschließlich selbst.
 | `POST` | `/api/v1/setup` | Genau den ersten Admin geschützt anlegen |
 | `POST` | `/api/v1/account/initial-password` | Persönliches Startpasswort einmalig ersetzen |
 | `GET` | `/api/v1/construction-sites/:id/dashboard?date=JJJJ-MM-TT` | Rollen- und einsatzbezogene mobile Baustellenakte lesen |
+| `POST` | `/api/v1/construction-sites/:id/notes?date=JJJJ-MM-TT` | Notiz idempotent für eine an diesem Tag zugewiesene Baustelle speichern |
 | `POST` | `/api/v1/construction-sites/:id/photos?date=JJJJ-MM-TT` | Foto für eine an diesem Tag zugewiesene Baustelle zentral speichern |
 | `GET` | `/api/v1/construction-sites/:id/documents/:documentId/content?date=JJJJ-MM-TT` | mit Baustellenzuweisung verknüpften Dateiinhalt geschützt lesen |
 | `GET` | `/api/v1/admin/overview?date=JJJJ-MM-TT` | Mitarbeiter, Kunden, Projekte, Baustellen, Dokumente, Arbeitsmodule und Wochenplanung Montag bis Freitag |
+| `POST` | `/api/v1/admin/site-notes` | Notiz für eine aktive Baustelle anlegen |
 | `POST` | `/api/v1/admin/site-tasks` | Aufgabe für eine aktive Baustelle anlegen |
 | `PATCH` | `/api/v1/admin/site-tasks/:id` | Aufgabenstatus versionsgeschützt ändern |
 | `POST` | `/api/v1/admin/site-materials` | Materialeintrag für eine aktive Baustelle anlegen |
@@ -130,8 +132,10 @@ Ohne Planungsrolle muss für Benutzer, Baustelle und Datum ein freigegebener ode
 abgeschlossener Einsatz existieren. Eine gültige UUID oder derselbe Mandant
 allein genügt nicht. Monteure erhalten nur eigene beziehungsweise allgemeine
 Aufgaben; Vorarbeiter sehen die vollständigen Inhalte der zugewiesenen
-Baustelle. Auch Foto-Upload und Dateiabruf wiederholen dieselbe Prüfung und
-verlangen eine tatsächliche Dokumentverknüpfung mit genau dieser Baustelle.
+Baustelle. Auch Foto-Upload, Notizspeicherung und Dateiabruf wiederholen dieselbe
+Prüfung. Der mobile Notiz-Endpunkt verwendet zusätzlich eine Client-UUID für
+idempotente Wiederholungen; eine bereits für anderen Inhalt verwendete UUID
+wird als Konflikt abgewiesen.
 
 Der Excel-Import akzeptiert ausschließlich `.xlsx` bis 1,5 MB. Zusätzlich
 werden Archivstruktur, entpackte Gesamtgröße, Tabellenabmessungen und maximale
@@ -181,8 +185,10 @@ nosniff` ausgeliefert. Metadaten, Inhalt und Links besitzen eigene RLS-Regeln.
 Fotografierte Papierberichte dürfen nur auf ein aktives Bilddokument verweisen,
 das derselben Baustelle zugeordnet ist. Die API prüft diesen Bezug innerhalb der
 Mandantentransaktion. Aufgaben- und Materialstatus verlangen die aktuelle
-`rowVersion`; parallele Änderungen werden als Konflikt abgewiesen. Alle drei
-Modultabellen verhindern fachliches Hartlöschen.
+`rowVersion`; parallele Änderungen werden als Konflikt abgewiesen. Die
+Modultabellen verhindern fachliches Hartlöschen. Baustellennotizen bleiben
+inhaltlich unverändert und können nur über ihren nachvollziehbaren Status
+archiviert werden.
 
 ## Lokale Inbetriebnahme
 

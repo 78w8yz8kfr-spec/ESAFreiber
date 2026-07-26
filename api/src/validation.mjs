@@ -486,6 +486,16 @@ export function validateSiteMaterialUpdate(body) {
   return { status, rowVersion };
 }
 
+export function validateSiteNote(body) {
+  rejectTenantFields(body);
+  return {
+    constructionSiteId: uuid(body.constructionSiteId, "Baustelle"),
+    clientNoteId: uuid(body.clientNoteId, "Notiz-ID"),
+    content: text(body.content, "Notiz", 2, 2000),
+    isImportant: boolean(body.isImportant, "Wichtige Notiz")
+  };
+}
+
 function validateReportPersonnel(value) {
   if (value === undefined) return { provided: false, entries: [] };
   if (!Array.isArray(value) || value.length > 100) {

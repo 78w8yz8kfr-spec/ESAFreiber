@@ -580,6 +580,51 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   assert.equal(availableMaterialResponse.status, 200, await availableMaterialResponse.clone().text());
   assert.equal((await availableMaterialResponse.json()).siteMaterial.status, "available");
 
+  const adminNotePayload = {
+    constructionSiteId: structuredSite.id,
+    clientNoteId: randomUUID(),
+    content: "Zugang zum Technikraum beim Hausmeister abholen.",
+    isImportant: true
+  };
+  const adminNoteResponse = await fetch(`${baseUrl}/api/v1/admin/site-notes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: plannerCookie },
+    body: JSON.stringify(adminNotePayload)
+  });
+  assert.equal(adminNoteResponse.status, 201, await adminNoteResponse.clone().text());
+  const adminNote = (await adminNoteResponse.json()).siteNote;
+  assert.equal(adminNote.isImportant, true);
+  assert.equal(adminNote.content, adminNotePayload.content);
+
+  const mobileNotePayload = {
+    clientNoteId: randomUUID(),
+    content: "Kabeltrommeln stehen im Lagerraum links.",
+    isImportant: false
+  };
+  const mobileNoteUrl =
+    `${baseUrl}/api/v1/construction-sites/${structuredSite.id}/notes?date=${assignmentDate}`;
+  const mobileNoteResponse = await fetch(mobileNoteUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: foremanCookie },
+    body: JSON.stringify(mobileNotePayload)
+  });
+  assert.equal(mobileNoteResponse.status, 201, await mobileNoteResponse.clone().text());
+  const mobileNote = (await mobileNoteResponse.json()).siteNote;
+  assert.equal(mobileNote.authorUserId, foreman.id);
+  assert.equal(mobileNote.content, mobileNotePayload.content);
+
+  const duplicateMobileNoteResponse = await fetch(mobileNoteUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: foremanCookie },
+    body: JSON.stringify(mobileNotePayload)
+  });
+  assert.equal(
+    duplicateMobileNoteResponse.status,
+    200,
+    await duplicateMobileNoteResponse.clone().text()
+  );
+  assert.equal((await duplicateMobileNoteResponse.json()).siteNote.id, mobileNote.id);
+
   const documentContent = Buffer.from(`%PDF-1.4\nSchäfchen Dokument ${suffix}`, "utf8");
   const documentUploadResponse = await fetch(`${baseUrl}/api/v1/admin/documents`, {
     method: "POST",
@@ -684,6 +729,9 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   )));
   assert.ok(foremanSiteDashboard.tasks.some((item) => item.id === completedSiteTask.id));
   assert.ok(foremanSiteDashboard.materials.some((item) => item.id === siteMaterial.id));
+  assert.ok(foremanSiteDashboard.notes.some((item) => item.id === adminNote.id));
+  assert.ok(foremanSiteDashboard.notes.some((item) => item.id === mobileNote.id));
+  assert.equal(foremanSiteDashboard.notes[0].id, adminNote.id);
   assert.ok(foremanSiteDashboard.reports.some((item) => item.id === mobileReport.id));
   assert.ok(foremanSiteDashboard.documents.some((item) => item.id === uploadedDocument.id));
 
@@ -856,6 +904,8 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   );
   assert.ok(structureOverview.siteTasks.some((item) => item.id === completedSiteTask.id && item.status === "done"));
   assert.ok(structureOverview.siteMaterials.some((item) => item.id === siteMaterial.id && item.status === "available"));
+  assert.ok(structureOverview.siteNotes.some((item) => item.id === adminNote.id && item.isImportant));
+  assert.ok(structureOverview.siteNotes.some((item) => item.id === mobileNote.id));
   assert.ok(structureOverview.siteReports.some((item) => item.id === siteReport.id && item.sourceMode === "photo"));
 
   const siteResponse = await fetch(`${baseUrl}/api/v1/admin/sites`, {

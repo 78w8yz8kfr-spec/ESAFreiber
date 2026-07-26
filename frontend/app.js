@@ -94,6 +94,14 @@
     employeeSiteTeam: document.querySelector("#employee-site-team"),
     employeeSiteTaskCount: document.querySelector("#employee-site-task-count"),
     employeeSiteTasks: document.querySelector("#employee-site-tasks"),
+    employeeSiteNoteCount: document.querySelector("#employee-site-note-count"),
+    employeeSiteNotes: document.querySelector("#employee-site-notes"),
+    employeeSiteNoteAdd: document.querySelector("#employee-site-note-add"),
+    employeeSiteNoteForm: document.querySelector("#employee-site-note-form"),
+    employeeSiteNoteContent: document.querySelector("#employee-site-note-content"),
+    employeeSiteNoteImportant: document.querySelector("#employee-site-note-important"),
+    employeeSiteNoteCancel: document.querySelector("#employee-site-note-cancel"),
+    employeeSiteNoteMessage: document.querySelector("#employee-site-note-message"),
     employeeSiteReportCount: document.querySelector("#employee-site-report-count"),
     employeeSiteReports: document.querySelector("#employee-site-reports"),
     employeeSiteDocumentCount: document.querySelector("#employee-site-document-count"),
@@ -204,6 +212,14 @@
     siteTaskDueDate: document.querySelector("#site-task-due-date"),
     siteTaskCancel: document.querySelector("#site-task-cancel"),
     siteTaskMessage: document.querySelector("#site-task-message"),
+    siteDashboardNoteCount: document.querySelector("#site-dashboard-note-count"),
+    siteDashboardNotes: document.querySelector("#site-dashboard-notes"),
+    siteNoteAdd: document.querySelector("#site-note-add"),
+    siteNoteForm: document.querySelector("#site-note-form"),
+    siteNoteContent: document.querySelector("#site-note-content"),
+    siteNoteImportant: document.querySelector("#site-note-important"),
+    siteNoteCancel: document.querySelector("#site-note-cancel"),
+    siteNoteMessage: document.querySelector("#site-note-message"),
     siteDashboardMaterialCount: document.querySelector("#site-dashboard-material-count"),
     siteDashboardMaterials: document.querySelector("#site-dashboard-materials"),
     siteMaterialAdd: document.querySelector("#site-material-add"),
@@ -625,7 +641,7 @@
     elements.passwordState.textContent = demoMode ? "In der Demo inaktiv" : "Sicher verschlüsselt";
     elements.loginSubmit.classList.toggle("button--secondary", demoMode);
     elements.loginSubmit.classList.toggle("button--primary", !demoMode);
-    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.24.0 ${demoMode ? "Demo" : "Online"}`;
+    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.25.0 ${demoMode ? "Demo" : "Online"}`;
 
     if (demoMode) {
       elements.modeNoteText.replaceChildren();
@@ -1414,6 +1430,44 @@
     });
   }
 
+  function renderSiteNotes(siteId) {
+    const notes = (adminState?.siteNotes || []).filter((note) => (
+      note.constructionSiteId === siteId && note.status === "active"
+    ));
+    elements.siteDashboardNoteCount.textContent = String(notes.length);
+    elements.siteDashboardNotes.replaceChildren();
+    if (notes.length === 0) {
+      appendSiteModuleEmpty(elements.siteDashboardNotes, "Noch keine Notiz für diese Baustelle.");
+      return;
+    }
+    notes.forEach((note) => {
+      const item = document.createElement("li");
+      const content = document.createElement("div");
+      const heading = document.createElement("div");
+      const text = document.createElement("strong");
+      const meta = document.createElement("span");
+      text.textContent = note.content;
+      heading.append(text);
+      if (note.isImportant) {
+        const badge = document.createElement("small");
+        badge.className = "module-chip module-chip--important";
+        badge.textContent = "Wichtig";
+        heading.append(badge);
+      }
+      meta.textContent = [
+        note.authorName,
+        new Intl.DateTimeFormat("de-DE", {
+          dateStyle: "short",
+          timeStyle: "short"
+        }).format(new Date(note.createdAt))
+      ].filter(Boolean).join(" · ");
+      content.append(heading, meta);
+      item.className = "site-module-item";
+      item.append(content);
+      elements.siteDashboardNotes.append(item);
+    });
+  }
+
   function renderSiteReports(siteId) {
     const reports = (adminState?.siteReports || []).filter((report) => report.constructionSiteId === siteId);
     elements.siteDashboardReportCount.textContent = String(reports.length);
@@ -1500,6 +1554,13 @@
     elements.siteTaskForm.reset();
     elements.siteTaskForm.hidden = true;
     elements.siteTaskMessage.textContent = "";
+  }
+
+  function resetSiteNoteForm() {
+    elements.siteNoteForm.reset();
+    delete elements.siteNoteForm.dataset.clientNoteId;
+    elements.siteNoteForm.hidden = true;
+    elements.siteNoteMessage.textContent = "";
   }
 
   function resetSiteMaterialForm() {
@@ -1798,6 +1859,7 @@
     openedSiteId = site.id;
     resetDeliveryNoteCapture();
     resetSiteTaskForm();
+    resetSiteNoteForm();
     resetSiteMaterialForm();
     resetSiteReportForm();
     elements.siteDashboardTitle.textContent = site.name;
@@ -1827,6 +1889,7 @@
       (employee) => `${employee.firstName} ${employee.lastName} · ${employee.personnelNumber}`
     );
     renderSiteTasks(site.id);
+    renderSiteNotes(site.id);
     renderSiteMaterials(site.id);
     renderSiteReports(site.id);
     elements.siteEditForm.hidden = true;
@@ -2159,6 +2222,7 @@
     if (openedSiteId && !elements.siteDashboard.hidden) {
       renderSiteDocuments(openedSiteId);
       renderSiteTasks(openedSiteId);
+      renderSiteNotes(openedSiteId);
       renderSiteMaterials(openedSiteId);
       renderSiteReports(openedSiteId);
     }
@@ -2331,6 +2395,28 @@
       });
     }
 
+    const notes = dashboard.notes || [];
+    elements.employeeSiteNoteCount.textContent = String(notes.length);
+    elements.employeeSiteNotes.replaceChildren();
+    if (notes.length === 0) {
+      appendEmployeeSiteEmpty(elements.employeeSiteNotes, "Noch keine Notiz für diese Baustelle.");
+    } else {
+      notes.forEach((note) => {
+        appendEmployeeSiteItem(
+          elements.employeeSiteNotes,
+          note.content,
+          [
+            note.authorName,
+            new Intl.DateTimeFormat("de-DE", {
+              dateStyle: "short",
+              timeStyle: "short"
+            }).format(new Date(note.createdAt))
+          ].filter(Boolean).join(" · "),
+          note.isImportant ? "Wichtig" : "Notiz"
+        );
+      });
+    }
+
     elements.employeeSiteReportCount.textContent = String(dashboard.reports.length);
     elements.employeeSiteReports.replaceChildren();
     if (dashboard.reports.length === 0) {
@@ -2405,9 +2491,14 @@
     }
 
     elements.employeeSitePhotoAdd.disabled = !navigator.onLine;
+    elements.employeeSiteNoteAdd.disabled = !navigator.onLine;
     elements.employeeSitePhotoMessage.textContent = navigator.onLine
       ? ""
       : "Fotos können wieder hinzugefügt werden, sobald eine Verbindung besteht.";
+    if (!navigator.onLine) {
+      elements.employeeSiteNoteMessage.textContent =
+        "Neue Notizen können wieder gespeichert werden, sobald eine Verbindung besteht.";
+    }
   }
 
   async function openEmployeeSiteWorkspace() {
@@ -2419,6 +2510,7 @@
       return;
     }
 
+    resetEmployeeSiteNoteForm();
     const cached = employeeSiteState
       && employeeSiteState.site?.id === assignment.constructionSite.id
       && employeeSiteState.date === state.workDate;
@@ -2484,6 +2576,50 @@
     } finally {
       elements.employeeSitePhotoAdd.disabled = !navigator.onLine;
       elements.employeeSitePhotoInput.value = "";
+    }
+  }
+
+  function resetEmployeeSiteNoteForm() {
+    elements.employeeSiteNoteForm.reset();
+    delete elements.employeeSiteNoteForm.dataset.clientNoteId;
+    elements.employeeSiteNoteForm.hidden = true;
+    elements.employeeSiteNoteMessage.textContent = "";
+  }
+
+  async function createEmployeeSiteNote() {
+    if (!employeeSiteState || !navigator.onLine) {
+      elements.employeeSiteNoteMessage.textContent =
+        "Für eine neue Notiz ist momentan eine Verbindung erforderlich.";
+      return;
+    }
+    const submit = elements.employeeSiteNoteForm.querySelector('button[type="submit"]');
+    const clientNoteId = elements.employeeSiteNoteForm.dataset.clientNoteId || createClientEntryId();
+    elements.employeeSiteNoteForm.dataset.clientNoteId = clientNoteId;
+    submit.disabled = true;
+    elements.employeeSiteNoteMessage.textContent = "Notiz wird gespeichert …";
+    try {
+      await requestJson(
+        `./api/v1/construction-sites/${encodeURIComponent(employeeSiteState.site.id)}/notes?date=${encodeURIComponent(employeeSiteState.date)}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            clientNoteId,
+            content: elements.employeeSiteNoteContent.value,
+            isImportant: elements.employeeSiteNoteImportant.checked
+          })
+        }
+      );
+      resetEmployeeSiteNoteForm();
+      const body = await requestJson(
+        `./api/v1/construction-sites/${encodeURIComponent(employeeSiteState.site.id)}/dashboard?date=${encodeURIComponent(employeeSiteState.date)}`
+      );
+      renderEmployeeSiteWorkspace(body.dashboard);
+      showToast("Baustellennotiz gespeichert.");
+    } catch (error) {
+      if (error.status === 401) showLogin();
+      else elements.employeeSiteNoteMessage.textContent = error.message;
+    } finally {
+      submit.disabled = false;
     }
   }
 
@@ -2978,9 +3114,12 @@
     elements.connectionState.querySelector("span").textContent = label;
     if (!elements.employeeSiteWorkspace.hidden) {
       elements.employeeSitePhotoAdd.disabled = !online;
+      elements.employeeSiteNoteAdd.disabled = !online;
       if (!online) {
         elements.employeeSitePhotoMessage.textContent =
           "Fotos können wieder hinzugefügt werden, sobald eine Verbindung besteht.";
+        elements.employeeSiteNoteMessage.textContent =
+          "Neue Notizen können wieder gespeichert werden, sobald eine Verbindung besteht.";
       }
     }
   }
@@ -3675,6 +3814,40 @@
     }
   });
 
+  elements.siteNoteAdd.addEventListener("click", () => {
+    resetSiteNoteForm();
+    elements.siteNoteForm.dataset.clientNoteId = createClientEntryId();
+    elements.siteNoteForm.hidden = false;
+    elements.siteNoteContent.focus({ preventScroll: true });
+  });
+  elements.siteNoteCancel.addEventListener("click", resetSiteNoteForm);
+  elements.siteNoteForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const site = adminState?.sites.find((candidate) => candidate.id === openedSiteId);
+    if (!site) return;
+    const submit = elements.siteNoteForm.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    elements.siteNoteMessage.textContent = "Notiz wird gespeichert …";
+    try {
+      await requestJson("./api/v1/admin/site-notes", {
+        method: "POST",
+        body: JSON.stringify({
+          constructionSiteId: site.id,
+          clientNoteId: elements.siteNoteForm.dataset.clientNoteId || createClientEntryId(),
+          content: elements.siteNoteContent.value,
+          isImportant: elements.siteNoteImportant.checked
+        })
+      });
+      resetSiteNoteForm();
+      await refreshAdmin();
+      showToast("Notiz für die Baustelle gespeichert.");
+    } catch (error) {
+      elements.siteNoteMessage.textContent = error.message;
+    } finally {
+      submit.disabled = false;
+    }
+  });
+
   elements.siteMaterialAdd.addEventListener("click", () => {
     resetSiteMaterialForm();
     elements.siteMaterialForm.hidden = false;
@@ -4208,6 +4381,21 @@
     const [file] = elements.employeeSitePhotoInput.files || [];
     if (file) void uploadEmployeeSitePhoto(file);
   });
+  elements.employeeSiteNoteAdd.addEventListener("click", () => {
+    if (!navigator.onLine) {
+      showToast("Für eine neue Notiz ist momentan eine Verbindung erforderlich.");
+      return;
+    }
+    resetEmployeeSiteNoteForm();
+    elements.employeeSiteNoteForm.dataset.clientNoteId = createClientEntryId();
+    elements.employeeSiteNoteForm.hidden = false;
+    elements.employeeSiteNoteContent.focus({ preventScroll: true });
+  });
+  elements.employeeSiteNoteCancel.addEventListener("click", resetEmployeeSiteNoteForm);
+  elements.employeeSiteNoteForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void createEmployeeSiteNote();
+  });
   elements.showWeek.addEventListener("click", () => {
     showDashboardPane("week");
   });
@@ -4238,6 +4426,7 @@
     resetSiteReportForm();
     resetSiteReportFinalization();
     resetSiteTaskForm();
+    resetSiteNoteForm();
     resetSiteMaterialForm();
     openedSiteId = null;
     elements.siteEditForm.hidden = true;

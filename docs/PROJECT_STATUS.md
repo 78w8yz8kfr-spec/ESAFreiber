@@ -1,7 +1,7 @@
 # Projektstatus
 
 Stand: 26.07.2026
-Technischer Stand: V0.24.0
+Technischer Stand: V0.25.0
 
 ## Abgeschlossen
 
@@ -134,6 +134,10 @@ Technischer Stand: V0.24.0
 - Migration 027 erlaubt mehrere unveränderliche Arbeitsblöcke desselben Mitarbeiters am selben Tag
 - nach Feierabend kann der Arbeitstag direkt erneut gestartet werden; Unterbrechungen zwischen den Blöcken zählen nicht als Arbeitszeit
 - API, Offline-Synchronisation, Live-Stundenzettel und Tagesberechnung verwenden gemeinsam die Rechenregel Version 2
+- Migration 028 ergänzt unveränderliche, mandantengetrennte Baustellennotizen mit sicherer Archivierungsgrundlage
+- Büro und berechtigt eingeplante Mitarbeiter sehen denselben thematischen Notizbestand direkt in der Baustellenakte
+- wichtige Hinweise werden hervorgehoben; Verfasser und Erstellungszeitpunkt bleiben nachvollziehbar
+- eine Client-UUID verhindert doppelte Notizen bei wiederholtem mobilen Absenden
 
 ## Noch zu prüfen
 
@@ -145,9 +149,8 @@ Technischer Stand: V0.24.0
 
 ## Nächster Entwicklungsschritt
 
-Die mobile Baustellenakte wird als Nächstes um eigene Baustellennotizen ohne
-Aktivitätschronik ergänzt. Danach werden dauerhafte Datenbank, Backup-Plan,
-Überwachung und Objektspeicher für den Betriebsstart festgelegt. Mobile
+Dauerhafte Datenbank, Backup-Plan, Wiederherstellungsprobe, Überwachung und
+Objektspeicher werden als Nächstes für den Betriebsstart festgelegt. Mobile
 Aufgabenaktionen bleiben gemäß der aktuellen Priorisierung zunächst
 übersprungen.
 

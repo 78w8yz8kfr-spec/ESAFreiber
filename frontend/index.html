@@ -8,9 +8,9 @@
     <title>Schäfchen</title>
     <link rel="icon" href="./assets/mark.svg" type="image/svg+xml">
     <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="stylesheet" href="./styles.css?v=0.24.0">
-    <script src="./app.js?v=0.24.0" defer></script>
-    <script src="./version.js?v=0.24.0" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=0.25.0">
+    <script src="./app.js?v=0.25.0" defer></script>
+    <script src="./version.js?v=0.25.0" defer></script>
   </head>
   <body>
     <main id="app" class="app-shell">
@@ -124,7 +124,7 @@
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
           </button>
 
-          <p id="login-footer" class="login-footer">Einfach vor komplex · Version 0.24.0</p>
+          <p id="login-footer" class="login-footer">Einfach vor komplex · Version 0.25.0</p>
         </div>
       </section>
 
@@ -294,6 +294,31 @@
                   <span id="employee-site-task-count" class="module-count">0</span>
                 </div>
                 <ul id="employee-site-tasks" class="employee-site-list"></ul>
+              </section>
+
+              <section class="employee-site-module" aria-labelledby="employee-site-notes-title">
+                <div class="employee-site-module__heading">
+                  <div>
+                    <span class="employee-site-module__icon" aria-hidden="true">✎</span>
+                    <h2 id="employee-site-notes-title">Notizen</h2>
+                  </div>
+                  <span id="employee-site-note-count" class="module-count">0</span>
+                </div>
+                <button id="employee-site-note-add" class="button button--secondary" type="button">Notiz hinzufügen</button>
+                <form id="employee-site-note-form" class="site-module-form" novalidate hidden>
+                  <label for="employee-site-note-content">Hinweis für die Baustelle</label>
+                  <textarea id="employee-site-note-content" maxlength="2000" rows="4" required placeholder="Was sollen die anderen wissen?"></textarea>
+                  <label class="check-row" for="employee-site-note-important">
+                    <input id="employee-site-note-important" type="checkbox">
+                    Als wichtig markieren
+                  </label>
+                  <div class="site-module-form__actions">
+                    <button class="button button--primary" type="submit">Notiz speichern</button>
+                    <button id="employee-site-note-cancel" class="text-button" type="button">Abbrechen</button>
+                  </div>
+                  <p id="employee-site-note-message" class="form-message" aria-live="polite"></p>
+                </form>
+                <ul id="employee-site-notes" class="employee-site-list"></ul>
               </section>
 
               <section class="employee-site-module" aria-labelledby="employee-site-reports-title">
@@ -631,6 +656,26 @@
                     <p id="site-task-message" class="form-message" aria-live="polite"></p>
                   </form>
                   <ul id="site-dashboard-tasks" class="site-module-list" aria-label="Aufgaben dieser Baustelle"></ul>
+                </div>
+              </details>
+              <details id="site-dashboard-notes-panel">
+                <summary>Notizen <span id="site-dashboard-note-count" class="module-count">0</span></summary>
+                <div class="site-work-module">
+                  <button id="site-note-add" class="button button--primary" type="button">Notiz hinzufügen</button>
+                  <form id="site-note-form" class="site-module-form" novalidate hidden>
+                    <label for="site-note-content">Hinweis für die Baustelle</label>
+                    <textarea id="site-note-content" maxlength="2000" rows="4" required placeholder="Was sollen Büro und Baustellenteam wissen?"></textarea>
+                    <label class="check-row" for="site-note-important">
+                      <input id="site-note-important" type="checkbox">
+                      Als wichtig markieren
+                    </label>
+                    <div class="site-module-form__actions">
+                      <button class="button button--primary" type="submit">Notiz speichern</button>
+                      <button id="site-note-cancel" class="text-button" type="button">Abbrechen</button>
+                    </div>
+                    <p id="site-note-message" class="form-message" aria-live="polite"></p>
+                  </form>
+                  <ul id="site-dashboard-notes" class="site-module-list" aria-label="Notizen dieser Baustelle"></ul>
                 </div>
               </details>
               <details id="site-dashboard-materials-panel">

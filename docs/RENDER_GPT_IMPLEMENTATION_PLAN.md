@@ -66,6 +66,7 @@ dürfen keine parallelen Stammdatenbestände erzeugen.
 - Materialbedarf mit den Stufen benötigt, bestellt, vor Ort und verbraucht;
 - Montage- und Bautagesberichte digital, als unverändertes Originalfoto oder
   per Diktat erfassen;
+- gemeinsame Baustellennotizen für Büro und berechtigt eingeplante Mitarbeiter;
 - ruhige Themenbereiche ohne Aktivitätschronik und ohne zusätzliche
   Hauptnavigation.
 
@@ -76,8 +77,9 @@ dürfen keine parallelen Stammdatenbestände erzeugen.
    Aufbewahrung festlegen. Für wachsende Dateimengen wird S3-/MinIO-kompatibler
    Objektspeicher angebunden.
 2. **Baustellenarbeit – Grundfunktion umgesetzt**
-   Aufgaben, Material sowie Montage- und Bautagesberichte liegen direkt in der
-   Baustelle. Notizen folgen erst als aktiviertes Modul mit echtem Datenmodell.
+   Aufgaben, Notizen, Material sowie Montage- und Bautagesberichte liegen direkt
+   in der Baustelle und verwenden jeweils ein echtes, mandantengetrenntes
+   Datenmodell.
 3. **Berichte und PDFs**
    Entwurf, Freigabe, Unterschriften, unveränderliche PDF-Version und zentrale
    Dokumentverknüpfung. Firmenlogo und zum Erstellzeitpunkt gültige Firmendaten

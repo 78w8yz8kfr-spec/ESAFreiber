@@ -2428,6 +2428,27 @@ select:focus-visible {
   resize: vertical;
 }
 
+.site-module-form .check-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #ffffff;
+}
+
+.site-module-form .check-row input {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  min-height: 20px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--brand);
+}
+
 .site-module-form__note,
 .site-module-form .form-message {
   margin: 0;
@@ -2575,6 +2596,11 @@ select:focus-visible {
 .module-chip--returned {
   color: var(--brand-dark);
   background: var(--brand-soft);
+}
+
+.module-chip--important {
+  color: #ffffff;
+  background: var(--brand);
 }
 
 .module-chip--priority-high {

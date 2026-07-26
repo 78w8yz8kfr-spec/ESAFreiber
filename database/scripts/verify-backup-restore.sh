@@ -83,7 +83,8 @@ BEGIN
             ('site_supervisors'),
             ('site_supervisor_history'),
             ('work_days'),
-            ('time_entries')
+            ('time_entries'),
+            ('site_notes')
     ) AS required(table_name)
     WHERE TO_REGCLASS('public.' || required.table_name) IS NULL;
 

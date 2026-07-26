@@ -22,6 +22,7 @@ import {
   validateProjectUpdate,
   validateSiteMaterial,
   validateSiteMaterialUpdate,
+  validateSiteNote,
   validateSiteReport,
   validateSiteReportFinalization,
   validateSiteTask,
@@ -110,7 +111,7 @@ test("Dokumente werden typ-, größen- und zuordnungsbezogen geprüft", () => {
   );
 });
 
-test("Baustellenmodule validieren Aufgaben, Material und Berichte", () => {
+test("Baustellenmodule validieren Aufgaben, Notizen, Material und Berichte", () => {
   const siteId = "22222222-2222-4222-8222-222222222222";
   const userId = "33333333-3333-4333-8333-333333333333";
   const documentId = "44444444-4444-4444-8444-444444444444";
@@ -139,6 +140,31 @@ test("Baustellenmodule validieren Aufgaben, Material und Berichte", () => {
     status: "planned"
   }).quantity, 50);
   assert.deepEqual(validateSiteMaterialUpdate({ status: "used", rowVersion: 1 }), { status: "used", rowVersion: 1 });
+
+  const noteId = "55555555-5555-4555-8555-555555555555";
+  assert.deepEqual(validateSiteNote({
+    constructionSiteId: siteId,
+    clientNoteId: noteId,
+    content: "  Hauptverteilung vor dem Einschalten prüfen.  ",
+    isImportant: true
+  }), {
+    constructionSiteId: siteId,
+    clientNoteId: noteId,
+    content: "Hauptverteilung vor dem Einschalten prüfen.",
+    isImportant: true
+  });
+  assert.throws(() => validateSiteNote({
+    constructionSiteId: siteId,
+    clientNoteId: noteId,
+    content: " ",
+    isImportant: false
+  }), /Notiz/);
+  assert.throws(() => validateSiteNote({
+    constructionSiteId: siteId,
+    clientNoteId: noteId,
+    content: "Hinweis",
+    isImportant: "ja"
+  }), /Wichtige Notiz/);
 
   assert.equal(validateSiteReport({
     constructionSiteId: siteId,
