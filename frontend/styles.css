@@ -1622,6 +1622,63 @@ select:focus-visible {
   background: #f3f3f3;
 }
 
+.week-day-submit {
+  width: calc(100% - 32px);
+  margin: 14px 16px 16px;
+}
+
+.week-day-state {
+  margin: 0;
+  padding: 13px 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  background: #fafafa;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.week-day-state--approved {
+  color: #176b45;
+  background: #effaf4;
+}
+
+.week-day-state--locked {
+  color: var(--ink);
+  background: #f1f1f1;
+}
+
+.work-day-review-list li {
+  align-items: flex-start;
+}
+
+.work-day-review-status {
+  width: max-content;
+  margin-top: 3px;
+  padding: 4px 7px;
+  border-radius: 8px;
+  color: var(--brand);
+  background: var(--brand-soft);
+  font-size: 0.6rem !important;
+  font-weight: 800;
+}
+
+.work-day-review-status--approved {
+  color: #176b45 !important;
+  background: #effaf4;
+}
+
+.work-day-review-status--locked {
+  color: var(--ink) !important;
+  background: #eeeeee;
+}
+
+.work-day-review-action {
+  min-height: 44px;
+  flex: 0 0 auto;
+  padding: 9px 12px;
+  font-size: 0.66rem;
+}
+
 .info-card {
   margin-top: 27px;
   padding: 15px;

@@ -1,7 +1,7 @@
 # Projektstatus
 
 Stand: 26.07.2026
-Technischer Stand: V0.28.1
+Technischer Stand: V0.29.0
 
 ## Abgeschlossen
 
@@ -10,6 +10,8 @@ Technischer Stand: V0.28.1
 - eigener Wochen-Stundenzettel mit Tageskarten, Wochensummen und allen wirksamen Buchungen
 - eigene synchronisierte Zeitbuchungen können mit neuer Uhrzeit und Pflichtbegründung zur Korrektur eingereicht werden
 - Zeitkorrekturen werden an der betroffenen Buchung auf Start oder in der Woche geöffnet und im Stundenzettel geprüft; nur eine Genehmigung ändert die Zeit und bewahrt das Original historisch
+- abgeschlossene Tages-Stundenzettel können eingereicht, im Büro freigegeben und anschließend als abgerechnet gesperrt werden
+- auch nach der Abrechnung bleibt ein begründeter Korrekturantrag möglich; normale neue Buchungen bleiben gesperrt
 - Mandanten-, Eigentümer-, Tages-, Zeitreihenfolge- und Baustellenfolgeprüfung schützen Antrag und Entscheidung serverseitig
 
 - Phase 0: Vision, Anforderungen, Rollenmodell und ER-Struktur mit 20 Kerntabellen
@@ -147,6 +149,7 @@ Technischer Stand: V0.28.1
 - nur Administration und Geschäftsführung dürfen Spezialmodule aktivieren; jede Änderung besitzt Versionsschutz und unveränderliche Historie
 - deaktivierte oder noch nicht vollständig angebundene Module erzeugen keine leeren Menüpunkte
 - Migration 030 begrenzt die Modulplanung verbindlich auf VDE und DGUV; LWL und KNX gehören nicht zum Projektumfang
+- Migration 031 erlaubt nachvollziehbare Zeitkorrekturen an abgerechneten Tagen ohne die Abrechnungssperre für neue Buchungen aufzuweichen
 
 ## Noch zu prüfen
 

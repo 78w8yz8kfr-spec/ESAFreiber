@@ -62,6 +62,7 @@ import {
   validateTimeEntry,
   validateTimeEntryCorrection,
   validateTimeEntryCorrectionDecision,
+  validateWorkDayDecision,
   validateWorkDate
 } from "./validation.mjs";
 
@@ -237,7 +238,31 @@ function workDayDto(day, entries) {
     workMinutes: day.work_minutes,
     travelMinutes: day.travel_minutes,
     overtimeMinutes: day.overtime_minutes,
+    submittedAt: day.submitted_at ? new Date(day.submitted_at).toISOString() : null,
+    approvedAt: day.approved_at ? new Date(day.approved_at).toISOString() : null,
+    lockedAt: day.locked_at ? new Date(day.locked_at).toISOString() : null,
+    rowVersion: Number(day.row_version),
     entries: entries.map((entry) => timeEntryDto(entry))
+  };
+}
+
+function adminWorkDayDto(day) {
+  return {
+    id: day.id,
+    employeeId: day.user_id,
+    employeeName: day.employee_name,
+    workDate: databaseDate(day.work_date),
+    status: day.status,
+    targetWorkMinutes: day.target_work_minutes,
+    grossMinutes: day.gross_minutes,
+    breakMinutes: day.break_minutes,
+    workMinutes: day.work_minutes,
+    travelMinutes: day.travel_minutes,
+    overtimeMinutes: day.overtime_minutes,
+    submittedAt: day.submitted_at ? new Date(day.submitted_at).toISOString() : null,
+    approvedAt: day.approved_at ? new Date(day.approved_at).toISOString() : null,
+    lockedAt: day.locked_at ? new Date(day.locked_at).toISOString() : null,
+    rowVersion: Number(day.row_version)
   };
 }
 
@@ -362,6 +387,160 @@ async function getWorkWeek(client, context, weekStart) {
       overtimeMinutes: 0
     })
   };
+}
+
+async function submitOwnWorkDay(client, context, workDate) {
+  const dayResult = await client.query(
+    `SELECT id, status
+     FROM work_days
+     WHERE company_id = $1 AND user_id = $2 AND work_date = $3
+     FOR UPDATE`,
+    [context.companyId, context.userId, workDate]
+  );
+  if (dayResult.rowCount !== 1) {
+    throw new InputError(
+      "Für diesen Tag wurde noch kein Stundenzettel erfasst.",
+      404,
+      "work_day_not_found"
+    );
+  }
+  const day = dayResult.rows[0];
+  if (day.status === "submitted") return getWorkDay(client, context, workDate);
+  if (day.status !== "open") {
+    throw new InputError(
+      "Dieser Stundenzettel wurde bereits freigegeben oder abgerechnet.",
+      409,
+      "work_day_already_reviewed"
+    );
+  }
+
+  const timeline = await client.query(
+    `SELECT entry_type
+     FROM time_entries
+     WHERE company_id = $1
+       AND user_id = $2
+       AND work_day_id = $3
+       AND invalidated_at IS NULL
+       AND (
+         (original_entry_id IS NULL AND correction_status IS NULL)
+         OR correction_status = 'approved'
+       )
+     ORDER BY recorded_at DESC, created_at DESC, id DESC
+     LIMIT 1`,
+    [context.companyId, context.userId, day.id]
+  );
+  if (timeline.rowCount !== 1 || timeline.rows[0].entry_type !== "clock_out") {
+    throw new InputError(
+      "Der Arbeitstag muss zuerst mit Feierabend beendet werden.",
+      409,
+      "work_day_not_finished"
+    );
+  }
+  const pending = await client.query(
+    `SELECT 1
+     FROM time_entries
+     WHERE company_id = $1
+       AND user_id = $2
+       AND work_day_id = $3
+       AND correction_status = 'pending'
+     LIMIT 1`,
+    [context.companyId, context.userId, day.id]
+  );
+  if (pending.rowCount !== 0) {
+    throw new InputError(
+      "Bitte warte zuerst auf die Prüfung der offenen Zeitkorrektur.",
+      409,
+      "work_day_correction_pending"
+    );
+  }
+  await client.query(
+    `UPDATE work_days
+     SET status = 'submitted'
+     WHERE company_id = $1 AND user_id = $2 AND id = $3`,
+    [context.companyId, context.userId, day.id]
+  );
+  return getWorkDay(client, context, workDate);
+}
+
+async function getAdminWorkDay(client, context, workDayId) {
+  const result = await client.query(
+    `SELECT day.*, account.first_name || ' ' || account.last_name AS employee_name
+     FROM work_days AS day
+     JOIN users AS account
+       ON account.company_id = day.company_id AND account.id = day.user_id
+     WHERE day.company_id = $1 AND day.id = $2`,
+    [context.companyId, workDayId]
+  );
+  if (result.rowCount !== 1) {
+    throw new InputError(
+      "Der Stundenzettel wurde nicht gefunden.",
+      404,
+      "work_day_not_found"
+    );
+  }
+  return adminWorkDayDto(result.rows[0]);
+}
+
+async function reviewWorkDay(client, context, workDayId, input) {
+  await requirePlanner(client, context);
+  const current = await client.query(
+    `SELECT id, user_id, status
+     FROM work_days
+     WHERE company_id = $1 AND id = $2
+     FOR UPDATE`,
+    [context.companyId, workDayId]
+  );
+  if (current.rowCount !== 1) {
+    throw new InputError(
+      "Der Stundenzettel wurde nicht gefunden.",
+      404,
+      "work_day_not_found"
+    );
+  }
+  const expectedStatus = input.decision === "approved" ? "submitted" : "approved";
+  if (current.rows[0].status !== expectedStatus) {
+    throw new InputError(
+      input.decision === "approved"
+        ? "Nur ein eingereichter Stundenzettel kann freigegeben werden."
+        : "Nur ein freigegebener Stundenzettel kann abgerechnet werden.",
+      409,
+      "work_day_status_conflict"
+    );
+  }
+  const pending = await client.query(
+    `SELECT 1
+     FROM time_entries
+     WHERE company_id = $1
+       AND user_id = $2
+       AND work_day_id = $3
+       AND correction_status = 'pending'
+     LIMIT 1`,
+    [context.companyId, current.rows[0].user_id, workDayId]
+  );
+  if (pending.rowCount !== 0) {
+    throw new InputError(
+      "Der Stundenzettel besitzt noch eine offene Zeitkorrektur.",
+      409,
+      "work_day_correction_pending"
+    );
+  }
+
+  if (input.decision === "approved") {
+    await client.query(
+      `UPDATE work_days
+       SET status = 'approved', approved_by_user_id = $3
+       WHERE company_id = $1 AND id = $2`,
+      [context.companyId, workDayId, context.userId]
+    );
+  } else {
+    await client.query(
+      `UPDATE work_days
+       SET status = 'locked', locked_by_user_id = $3
+       WHERE company_id = $1 AND id = $2`,
+      [context.companyId, workDayId, context.userId]
+    );
+  }
+  return getAdminWorkDay(client, context, workDayId);
 }
 
 async function getAssignments(client, context, date) {
@@ -783,6 +962,7 @@ async function adminOverview(client, context, date) {
   const roles = await requirePlanner(client, context);
   const weekStart = mondayFor(date);
   const weekEnd = addUtcDays(weekStart, 4);
+  const reviewWeekEnd = addUtcDays(weekStart, 6);
   const [
     employeeResult,
     customerResult,
@@ -794,6 +974,7 @@ async function adminOverview(client, context, date) {
     materialResult,
     noteResult,
     reportResult,
+    workDayResult,
     correctionResult
   ] = await Promise.all([
     client.query(
@@ -996,6 +1177,18 @@ async function adminOverview(client, context, date) {
       [context.companyId]
     ),
     client.query(
+      `SELECT day.*, account.first_name || ' ' || account.last_name AS employee_name
+       FROM work_days AS day
+       JOIN users AS account
+         ON account.company_id = day.company_id AND account.id = day.user_id
+       WHERE day.company_id = $1
+         AND day.work_date BETWEEN $2 AND $3
+         AND day.status IN ('submitted', 'approved', 'locked')
+       ORDER BY day.work_date DESC,
+                LOWER(account.last_name), LOWER(account.first_name), day.id`,
+      [context.companyId, weekStart, reviewWeekEnd]
+    ),
+    client.query(
       `SELECT correction.id, correction.user_id, correction.work_day_id,
               correction.work_date, correction.original_entry_id,
               correction.entry_type, correction.requested_recorded_at,
@@ -1039,6 +1232,7 @@ async function adminOverview(client, context, date) {
     siteMaterials: materialResult.rows.map(siteMaterialDto),
     siteNotes: noteResult.rows.map(siteNoteDto),
     siteReports: reportResult.rows.map(siteReportDto),
+    workDays: workDayResult.rows.map(adminWorkDayDto),
     timeCorrections: correctionResult.rows.map(timeEntryCorrectionDto),
     assignments: weekAssignments.filter((assignment) => assignment.workDate === date),
     weekAssignments
@@ -3750,13 +3944,6 @@ async function createTimeEntryCorrection(client, context, input, timeZone) {
     );
   }
   const original = originalResult.rows[0];
-  if (original.status !== "open") {
-    throw new InputError(
-      "Dieser Arbeitstag ist bereits abgeschlossen und kann nicht mehr korrigiert werden.",
-      409,
-      "work_day_closed"
-    );
-  }
   const workDate = databaseDate(original.work_date);
   if (localDate(input.requestedRecordedAt, timeZone) !== workDate) {
     throw new InputError(
@@ -4391,6 +4578,30 @@ export function createApp({ pool, config, limiter = new LoginRateLimiter(), logg
           (client, context) => reviewTimeEntryCorrection(client, context, correctionId, input)
         );
         return json(response, 200, { timeCorrection: correction });
+      }
+
+      const adminWorkDayMatch = /^\/api\/v1\/admin\/work-days\/([^/]+)$/.exec(url.pathname);
+      if (request.method === "PATCH" && adminWorkDayMatch) {
+        const workDayId = validateId(adminWorkDayMatch[1], "Stundenzettel-ID");
+        const input = validateWorkDayDecision(await readJson(request));
+        const workDay = await withReadySession(
+          pool,
+          tokenHash,
+          (client, context) => reviewWorkDay(client, context, workDayId, input)
+        );
+        return json(response, 200, { workDay });
+      }
+
+      const workDaySubmitMatch =
+        /^\/api\/v1\/work-days\/(\d{4}-\d{2}-\d{2})\/submit$/.exec(url.pathname);
+      if (request.method === "POST" && workDaySubmitMatch) {
+        const date = validateWorkDate(workDaySubmitMatch[1]);
+        const day = await withReadySession(
+          pool,
+          tokenHash,
+          (client, context) => submitOwnWorkDay(client, context, date)
+        );
+        return json(response, 200, { workDay: day });
       }
 
       const workDayMatch = /^\/api\/v1\/work-days\/(\d{4}-\d{2}-\d{2})$/.exec(url.pathname);

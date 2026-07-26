@@ -4,6 +4,15 @@ Alle wesentlichen Änderungen an Schäfchen werden in dieser Datei dokumentiert.
 
 ## [Unreleased]
 
+### V0.29.0 – Stundenzettel prüfen und abrechnen
+
+- Monteure reichen einen vollständig beendeten Tages-Stundenzettel direkt in der Wochenansicht zur Prüfung ein
+- Büro und Geschäftsführung geben eingereichte Tage frei und sperren sie anschließend nachvollziehbar als abgerechnet
+- Start- und Wochenansicht zeigen eindeutig Offen, Zur Prüfung, Freigegeben oder Abgerechnet
+- nach Einreichung sind neue reguläre Buchungen ausgeschlossen; offene Korrekturen verhindern eine verfrühte Freigabe
+- begründete Korrekturanträge bleiben auch nach der Abrechnung möglich, während das Original historisch erhalten bleibt
+- neue Migration 031 trennt die erlaubte Korrekturanfrage von verbotenen neuen Buchungen an gesperrten Tagen
+
 ### V0.28.1 – Korrektur auch auf Start
 
 - der rote Korrekturzugang steht wieder direkt an jeder synchronisierten Buchung im Start-Stundenzettel

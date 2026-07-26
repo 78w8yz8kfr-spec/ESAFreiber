@@ -32,6 +32,7 @@ Frontend ausgibt.
 - zwei gekennzeichnete Demo-Einsätze in verbindlicher Reihenfolge
 - lokaler Live-Stundenzettel für Brutto-, Pausen-, Arbeits- und Fahrzeit
 - vollständiger Wochen-Stundenzettel mit Tageskarten und Summen für Arbeit, Pause und Fahrt
+- Tagesstatus Offen, Zur Prüfung, Freigegeben und Abgerechnet mit eindeutiger Büroprüfung
 - Navigation: Start, Woche und Mehr
 - keine Berichts- oder Verwaltungsfunktionen vor ihrer Entwicklungsphase
 
@@ -77,9 +78,11 @@ API stellt mindestens folgende Endpunkte bereit, bevor der Login produktiv wird:
 - `GET /api/v1/dashboard` – rollenabhängige Startdaten liefern
 - `POST /api/v1/time-entries` – Client-ID idempotent synchronisieren
 - `GET /api/v1/work-days/{date}` – berechneten Tagesstand laden
+- `POST /api/v1/work-days/{date}/submit` – beendeten eigenen Tag einreichen
 - `GET /api/v1/work-weeks/{montag}` – eigene Arbeitswoche mit Buchungen und Summen laden
 - `POST /api/v1/time-entry-corrections` – begründete Korrektur beantragen
 - `PATCH /api/v1/admin/time-entry-corrections/{id}` – Korrektur genehmigen oder ablehnen
+- `PATCH /api/v1/admin/work-days/{id}` – Stundenzettel freigeben oder als abgerechnet sperren
 
 Die chronologische Liste im Startbereich bleibt eine ruhige Live-Anzeige, bietet
 aber an jeder synchronisierten Buchung direkt die Aktion `Korrigieren`. Dieselbe

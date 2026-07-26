@@ -1,10 +1,10 @@
 # Sprint 2: Planung und Zeiterfassung
 
 Stand: 26.07.2026
-Technischer Stand: V0.28.1
+Technischer Stand: V0.29.0
 
 Dieses Dokument beschreibt die verbindlichen Regeln der Migrationen 009 bis
-012. Der Sprint verbindet Wochenplanung, Vorarbeiterverantwortung,
+012 sowie 027 und 031. Der Sprint verbindet Wochenplanung, Vorarbeiterverantwortung,
 Offline-Zeitereignisse und den berechneten Stundenzettel.
 
 Die PWA stellt den berechneten Stundenzettel zusätzlich als vollständige
@@ -73,6 +73,12 @@ Berechnete Werte können nicht direkt über die API geändert werden. Nach
 Einreichung und Freigabe kann ein Arbeitstag für die Abrechnung gesperrt werden;
 danach sind reguläre Änderungen und neue Buchungen ausgeschlossen.
 
+Der Mitarbeiter reicht einen vollständig mit Feierabend beendeten Tag selbst
+ein. Offene Korrekturen blockieren die Einreichung. Das Büro gibt den
+eingereichten Tag frei und sperrt ihn erst in einem zweiten, bewussten Schritt
+als abgerechnet. Die Zustände lauten `open`, `submitted`, `approved` und
+`locked`.
+
 ## 012 `time_entries`
 
 Zeitbuchungen sind Ereignisse:
@@ -106,10 +112,15 @@ der Datenbankkanal `schaefchen_time_correction` bereitet Benachrichtigungen vor.
 
 Die produktive PWA stellt den Ablauf direkt am eigenen synchronisierten
 Stundenzettel bereit. Offene Anträge zeigen weiterhin die Originalzeit; die
-Einsatzplanung listet alte Uhrzeit, gewünschte Uhrzeit und Begründung. Vor
+Wochenprüfung listet alte Uhrzeit, gewünschte Uhrzeit und Begründung. Vor
 einer Genehmigung prüft die API die vollständige Zeit- und Baustellenfolge
 erneut, damit zwischenzeitliche Buchungen keinen ungültigen Tagesablauf
 erzeugen.
+
+Migration 031 erlaubt diesen begründeten Antrag auch an einem bereits
+abgerechneten Tag. Normale neue Buchungen bleiben dort gesperrt. Wird die
+Korrektur genehmigt, wird der gesperrte Tag reproduzierbar neu berechnet und
+behält seinen Status `locked`.
 
 ## Öffentliche PWA-Demo
 

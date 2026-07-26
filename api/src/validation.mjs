@@ -45,6 +45,7 @@ const SITE_REPORT_TYPES = new Set(["montage", "daily"]);
 const SITE_REPORT_SOURCES = new Set(["digital", "photo", "speech"]);
 const ELECTRICAL_MODULE_KEYS = new Set(["vde", "dguv"]);
 const TIME_CORRECTION_DECISIONS = new Set(["approved", "rejected"]);
+const WORK_DAY_DECISIONS = new Set(["approved", "locked"]);
 const PNG_DATA_URL_PREFIX = "data:image/png;base64,";
 
 export class InputError extends Error {
@@ -687,6 +688,15 @@ export function validateTimeEntryCorrectionDecision(body) {
   const decision = text(body.decision, "Entscheidung", 7, 8).toLowerCase();
   if (!TIME_CORRECTION_DECISIONS.has(decision)) {
     throw new InputError("Die Korrekturentscheidung ist ungültig.");
+  }
+  return { decision };
+}
+
+export function validateWorkDayDecision(body) {
+  rejectTenantFields(body);
+  const decision = text(body.decision, "Entscheidung", 6, 8).toLowerCase();
+  if (!WORK_DAY_DECISIONS.has(decision)) {
+    throw new InputError("Die Stundenzettelentscheidung ist ungültig.");
   }
   return { decision };
 }

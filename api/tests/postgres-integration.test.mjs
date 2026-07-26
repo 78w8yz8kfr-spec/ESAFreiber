@@ -1488,6 +1488,96 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   assert.equal(correctedWorkDay.entries.at(-1).recordedAt, correctedClockOutAt);
   assert.equal(correctedWorkDay.entries.at(-1).pendingCorrection, null);
 
+  const submittedWorkDayResponse = await fetch(
+    `${baseUrl}/api/v1/work-days/${workDate}/submit`,
+    { method: "POST", headers: { Cookie: cookie } }
+  );
+  assert.equal(submittedWorkDayResponse.status, 200, await submittedWorkDayResponse.clone().text());
+  const submittedWorkDay = (await submittedWorkDayResponse.json()).workDay;
+  assert.equal(submittedWorkDay.status, "submitted");
+  assert.ok(submittedWorkDay.submittedAt);
+
+  const submittedOverviewResponse = await fetch(
+    `${baseUrl}/api/v1/admin/overview?date=${workDate}`,
+    { headers: { Cookie: plannerCookie } }
+  );
+  assert.equal(submittedOverviewResponse.status, 200);
+  const submittedOverview = (await submittedOverviewResponse.json()).overview;
+  assert.ok(submittedOverview.workDays.some((day) => (
+    day.id === submittedWorkDay.id && day.status === "submitted"
+  )));
+
+  const approvedWorkDayResponse = await fetch(
+    `${baseUrl}/api/v1/admin/work-days/${submittedWorkDay.id}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Cookie: plannerCookie },
+      body: JSON.stringify({ decision: "approved" })
+    }
+  );
+  assert.equal(approvedWorkDayResponse.status, 200, await approvedWorkDayResponse.clone().text());
+  assert.equal((await approvedWorkDayResponse.json()).workDay.status, "approved");
+
+  const lockedWorkDayResponse = await fetch(
+    `${baseUrl}/api/v1/admin/work-days/${submittedWorkDay.id}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Cookie: plannerCookie },
+      body: JSON.stringify({ decision: "locked" })
+    }
+  );
+  assert.equal(lockedWorkDayResponse.status, 200, await lockedWorkDayResponse.clone().text());
+  assert.equal((await lockedWorkDayResponse.json()).workDay.status, "locked");
+
+  const blockedNewBlock = await fetch(`${baseUrl}/api/v1/time-entries`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: cookie },
+    body: JSON.stringify({
+      clientEntryId: randomUUID(),
+      entryType: "clock_in",
+      recordedAt: new Date().toISOString(),
+      clientCreatedAt: new Date().toISOString()
+    })
+  });
+  assert.equal(blockedNewBlock.status, 409);
+  assert.equal((await blockedNewBlock.json()).error.code, "work_day_closed");
+
+  const lockedCorrectionResponse = await fetch(`${baseUrl}/api/v1/time-entry-corrections`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: cookie },
+    body: JSON.stringify({
+      originalEntryId: correctedWorkDay.entries[0].id,
+      requestedRecordedAt: new Date(new Date(clockInAt).valueOf() + 100).toISOString(),
+      reason: "Arbeitsbeginn wurde erst nach der Abrechnung als falsch erkannt"
+    })
+  });
+  assert.equal(lockedCorrectionResponse.status, 201, await lockedCorrectionResponse.clone().text());
+  const lockedCorrection = (await lockedCorrectionResponse.json()).timeCorrection;
+  assert.equal(lockedCorrection.status, "pending");
+
+  const approvedLockedCorrection = await fetch(
+    `${baseUrl}/api/v1/admin/time-entry-corrections/${lockedCorrection.id}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Cookie: plannerCookie },
+      body: JSON.stringify({ decision: "approved" })
+    }
+  );
+  assert.equal(
+    approvedLockedCorrection.status,
+    200,
+    await approvedLockedCorrection.clone().text()
+  );
+  const finalLockedWorkDayResponse = await fetch(`${baseUrl}/api/v1/work-days/${workDate}`, {
+    headers: { Cookie: cookie }
+  });
+  const finalLockedWorkDay = (await finalLockedWorkDayResponse.json()).workDay;
+  assert.equal(finalLockedWorkDay.status, "locked");
+  assert.equal(
+    finalLockedWorkDay.entries[0].recordedAt,
+    new Date(new Date(clockInAt).valueOf() + 100).toISOString()
+  );
+
   const logout = await fetch(`${baseUrl}/api/v1/session`, { method: "DELETE", headers: { Cookie: cookie } });
   assert.equal(logout.status, 200);
   const rejected = await fetch(`${baseUrl}/api/v1/session`, { headers: { Cookie: cookie } });

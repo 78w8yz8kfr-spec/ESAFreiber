@@ -122,6 +122,9 @@
     weekTotalTravel: document.querySelector("#week-total-travel"),
     weekMessage: document.querySelector("#week-message"),
     weekTimesheetList: document.querySelector("#week-timesheet-list"),
+    workDayReviewPanel: document.querySelector("#work-day-review-panel"),
+    workDayReviewCount: document.querySelector("#work-day-review-count"),
+    workDayReviewList: document.querySelector("#work-day-review-list"),
     assignmentCard: document.querySelector("#assignment-card"),
     assignmentOrder: document.querySelector("#assignment-order"),
     assignmentTitle: document.querySelector("#assignment-title"),
@@ -569,6 +572,7 @@
     return {
       version: 1,
       workDate: localDateKey(),
+      workDayStatus: null,
       events: [],
       reports: [],
       siteWorkspace: null
@@ -587,6 +591,7 @@
         return {
           version: 1,
           workDate: saved.workDate,
+          workDayStatus: saved.workDayStatus || null,
           events: saved.events,
           reports: Array.isArray(saved.reports) ? saved.reports : [],
           siteWorkspace: saved.siteWorkspace || null
@@ -668,7 +673,7 @@
     elements.passwordState.textContent = demoMode ? "In der Demo inaktiv" : "Sicher verschlüsselt";
     elements.loginSubmit.classList.toggle("button--secondary", demoMode);
     elements.loginSubmit.classList.toggle("button--primary", !demoMode);
-    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.28.1 ${demoMode ? "Demo" : "Online"}`;
+    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.29.0 ${demoMode ? "Demo" : "Online"}`;
 
     if (demoMode) {
       elements.modeNoteText.replaceChildren();
@@ -2126,6 +2131,77 @@
     }
   }
 
+  function renderWorkDayReviews() {
+    const workDays = adminState?.workDays || [];
+    const actionable = workDays.filter((day) => ["submitted", "approved"].includes(day.status));
+    elements.workDayReviewPanel.hidden = !canPlan();
+    elements.workDayReviewCount.textContent = String(actionable.length);
+    elements.workDayReviewList.replaceChildren();
+    if (workDays.length === 0) {
+      const empty = document.createElement("li");
+      empty.className = "admin-list__empty";
+      empty.textContent = "In dieser Woche wurde noch kein Stundenzettel eingereicht.";
+      elements.workDayReviewList.append(empty);
+      return;
+    }
+
+    workDays.forEach((day) => {
+      const item = document.createElement("li");
+      const content = document.createElement("div");
+      const title = document.createElement("strong");
+      const meta = document.createElement("span");
+      const status = document.createElement("span");
+      title.textContent = `${day.employeeName} · ${shortDate(day.workDate)}`;
+      meta.textContent = `Arbeit ${formatMinutes(day.workMinutes)} · Pause ${
+        formatMinutes(day.breakMinutes)
+      } · Fahrt ${formatMinutes(day.travelMinutes)}`;
+      status.className = `work-day-review-status work-day-review-status--${day.status}`;
+      status.textContent = {
+        submitted: "Zur Prüfung",
+        approved: "Freigegeben",
+        locked: "Abgerechnet"
+      }[day.status] || day.status;
+      content.append(title, meta, status);
+      item.append(content);
+
+      if (["submitted", "approved"].includes(day.status)) {
+        const action = document.createElement("button");
+        const decision = day.status === "submitted" ? "approved" : "locked";
+        action.type = "button";
+        action.className = day.status === "submitted"
+          ? "button button--secondary work-day-review-action"
+          : "button button--primary work-day-review-action";
+        action.textContent = day.status === "submitted" ? "Freigeben" : "Abrechnen";
+        action.addEventListener("click", async () => {
+          if (
+            decision === "locked"
+            && !window.confirm(
+              `${day.employeeName}: Stundenzettel als abgerechnet sperren?`
+            )
+          ) return;
+          action.disabled = true;
+          try {
+            await requestJson(`./api/v1/admin/work-days/${encodeURIComponent(day.id)}`, {
+              method: "PATCH",
+              body: JSON.stringify({ decision })
+            });
+            await Promise.all([refreshAdmin(adminState.date), refreshWeekData()]);
+            showToast(
+              decision === "approved"
+                ? "Stundenzettel freigegeben."
+                : "Stundenzettel als abgerechnet gesperrt."
+            );
+          } catch (error) {
+            action.disabled = false;
+            showToast(error.message);
+          }
+        });
+        item.append(action);
+      }
+      elements.workDayReviewList.append(item);
+    });
+  }
+
   function renderTimeCorrections() {
     const corrections = adminState?.timeCorrections || [];
     elements.timeCorrectionReviewPanel.hidden = !canPlan();
@@ -2317,6 +2393,7 @@
     renderProjectList();
     renderSiteList();
     renderDocumentList();
+    renderWorkDayReviews();
     renderTimeCorrections();
     if (openedSiteId && !elements.siteDashboard.hidden) {
       renderSiteDocuments(openedSiteId);
@@ -2966,6 +3043,10 @@
     const latest = lastEvent();
     const siteIndex = currentSiteIndex();
 
+    if (!demoMode && state.workDayStatus && state.workDayStatus !== "open") {
+      showToast("Dieser Stundenzettel ist nicht mehr für neue Buchungen geöffnet.");
+      return;
+    }
     if (!latest || latest.type === "clock_out") addEntry("clock_in");
     else if (latest.type === "clock_in" && assignments.length === 0) addEntry("clock_out");
     else if (latest.type === "clock_in" || latest.type === "next_site") addEntry("site_arrival", siteIndex);
@@ -2991,6 +3072,19 @@
     const latest = lastEvent();
     const siteIndex = currentSiteIndex();
     elements.secondaryAction.hidden = true;
+
+    if (!demoMode && state.workDayStatus && state.workDayStatus !== "open") {
+      const labels = {
+        submitted: ["Zur Prüfung eingereicht", "Das Büro prüft deinen Stundenzettel"],
+        approved: ["Stundenzettel freigegeben", "Vom Büro geprüft"],
+        locked: ["Stundenzettel abgerechnet", "Für neue Buchungen gesperrt"]
+      };
+      const [title, hint] = labels[state.workDayStatus] || labels.submitted;
+      setPrimaryAction(title, "✓", true);
+      elements.workdayTitle.textContent = title;
+      elements.actionHint.textContent = hint;
+      return;
+    }
 
     if (!latest) {
       setPrimaryAction("Arbeitstag starten", "▶");
@@ -3236,7 +3330,8 @@
     const fallbackDay = {
       workDate: localDateKey(today),
       workDay: {
-        status: lastEvent()?.type === "clock_out" ? "closed" : state.events.length ? "open" : null,
+        status: state.workDayStatus
+          || (lastEvent()?.type === "clock_out" ? "open" : state.events.length ? "open" : null),
         grossMinutes: fallbackTimes.gross,
         breakMinutes: fallbackTimes.pause,
         workMinutes: fallbackTimes.work,
@@ -3313,9 +3408,13 @@
         day: "2-digit",
         month: "2-digit"
       });
-      dayStatus.textContent = !workDay
-        ? "Keine Buchung"
-        : workDay.status === "closed" ? "Abgeschlossen" : "Läuft";
+      const statusLabels = {
+        open: workDay?.entries?.at(-1)?.entryType === "clock_out" ? "Beendet" : "Läuft",
+        submitted: "Zur Prüfung",
+        approved: "Freigegeben",
+        locked: "Abgerechnet"
+      };
+      dayStatus.textContent = !workDay ? "Keine Buchung" : statusLabels[workDay.status] || "Erfasst";
       total.textContent = formatMinutes(workDay?.workMinutes || 0);
       headingCopy.append(dateLabel, dayStatus);
       heading.append(headingCopy, total);
@@ -3370,6 +3469,35 @@
           entries.append(row);
         });
         dayCard.append(metrics, entries);
+
+        const lastEntry = workDay.entries.at(-1);
+        const hasPendingCorrection = workDay.entries.some((entry) => entry.pendingCorrection);
+        if (
+          workDay.status === "open"
+          && lastEntry?.entryType === "clock_out"
+          && !hasPendingCorrection
+        ) {
+          const submit = document.createElement("button");
+          submit.type = "button";
+          submit.className = "button button--secondary week-day-submit";
+          submit.textContent = "Stundenzettel einreichen";
+          submit.disabled = demoMode;
+          if (!submit.disabled) {
+            submit.addEventListener("click", () => {
+              void submitWorkDayForReview(workDate, submit);
+            });
+          }
+          dayCard.append(submit);
+        } else if (["submitted", "approved", "locked"].includes(workDay.status)) {
+          const stateNote = document.createElement("p");
+          stateNote.className = `week-day-state week-day-state--${workDay.status}`;
+          stateNote.textContent = {
+            submitted: "Eingereicht · wartet auf Prüfung im Büro",
+            approved: "Vom Büro freigegeben",
+            locked: "Abgerechnet · neue Buchungen sind gesperrt"
+          }[workDay.status];
+          dayCard.append(stateNote);
+        }
       }
       elements.weekTimesheetList.append(dayCard);
     });
@@ -3472,6 +3600,29 @@
     }));
   }
 
+  async function submitWorkDayForReview(workDate, button) {
+    if (
+      !window.confirm(
+        "Stundenzettel zur Prüfung einreichen? Danach sind keine neuen Buchungen für diesen Tag möglich."
+      )
+    ) return;
+    button.disabled = true;
+    elements.weekMessage.textContent = "Stundenzettel wird sicher eingereicht …";
+    try {
+      await requestJson(`./api/v1/work-days/${encodeURIComponent(workDate)}/submit`, {
+        method: "POST"
+      });
+      await Promise.all([refreshLiveData(), refreshWeekData(), refreshAdmin()]);
+      showToast("Stundenzettel eingereicht · das Büro kann ihn jetzt prüfen.");
+    } catch (error) {
+      if (error.status === 401) showLogin();
+      else {
+        elements.weekMessage.textContent = error.message;
+        button.disabled = false;
+      }
+    }
+  }
+
   async function refreshWeekData() {
     if (demoMode) {
       weekState = null;
@@ -3516,6 +3667,7 @@
       state = {
         version: 1,
         workDate: date,
+        workDayStatus: workDayBody.workDay?.status || null,
         events: [...persisted, ...pending.filter((entry) => !knownIds.has(entry.clientEntryId))]
           .sort((left, right) => new Date(left.recordedAt) - new Date(right.recordedAt)),
         reports: localReports,

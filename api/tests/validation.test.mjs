@@ -32,6 +32,7 @@ import {
   validateTimeEntry,
   validateTimeEntryCorrection,
   validateTimeEntryCorrectionDecision,
+  validateWorkDayDecision,
   validateWorkDate
 } from "../src/validation.mjs";
 
@@ -554,6 +555,19 @@ test("Zeitkorrekturen verlangen eigene Buchung Uhrzeit Grund und gültige Entsch
   assert.throws(
     () => validateTimeEntryCorrectionDecision({ decision: "offen" }),
     /Entscheidung/
+  );
+});
+
+test("Stundenzettelentscheidungen erlauben nur Freigabe und Abrechnung", () => {
+  assert.deepEqual(validateWorkDayDecision({ decision: "APPROVED" }), {
+    decision: "approved"
+  });
+  assert.deepEqual(validateWorkDayDecision({ decision: "locked" }), {
+    decision: "locked"
+  });
+  assert.throws(
+    () => validateWorkDayDecision({ decision: "rejected" }),
+    /Stundenzettelentscheidung/
   );
 });
 

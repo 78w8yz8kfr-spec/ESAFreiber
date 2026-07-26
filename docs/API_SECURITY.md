@@ -1,7 +1,7 @@
 # API-Sicherheitsgrenze
 
 Stand: 26.07.2026
-Technischer Stand: V0.28.1
+Technischer Stand: V0.29.0
 
 Die API ist die einzige erlaubte Verbindung zwischen PWA und PostgreSQL. Die
 öffentliche GitHub-Pages-Adresse bleibt eine lokale Demo. Im Online-Betrieb
@@ -112,12 +112,14 @@ API setzt beide Werte ausschließlich selbst.
 | `GET` | `/api/v1/session` | Eigene Firma, Person, Rollen und Ablaufzeit lesen |
 | `DELETE` | `/api/v1/session` | Aktuelle Sitzung widerrufen |
 | `GET` | `/api/v1/work-days/:date` | Eigenen berechneten Arbeitstag und Ereignisse lesen |
+| `POST` | `/api/v1/work-days/:date/submit` | Vollständig beendeten eigenen Stundenzettel zur Büroprüfung einreichen |
 | `GET` | `/api/v1/work-weeks/:monday` | Eigene sieben Kalendertage mit wirksamen Buchungen und Summen lesen |
 | `GET` | `/api/v1/site-assignments/:date` | Eigene freigegebene Tageseinsätze lesen |
 | `POST` | `/api/v1/site-reports` | Mobilen Bericht idempotent erfassen; nur für den berichtspflichtig eingeteilten Vorarbeiter |
 | `POST` | `/api/v1/time-entries` | Offline-Zeitereignis idempotent synchronisieren |
 | `POST` | `/api/v1/time-entry-corrections` | Begründete Korrektur einer eigenen wirksamen Zeitbuchung beantragen |
 | `PATCH` | `/api/v1/admin/time-entry-corrections/:id` | Offenen Korrekturantrag genehmigen oder ablehnen |
+| `PATCH` | `/api/v1/admin/work-days/:id` | Eingereichten Stundenzettel freigeben oder freigegebenen Tag als abgerechnet sperren |
 
 Der Zeitendpunkt verlangt eine Client-UUID, Buchungsart und ISO-Zeitpunkte mit
 Zeitzone. Baustellenereignisse benötigen eine für diesen Mitarbeiter und Tag
