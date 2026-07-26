@@ -327,6 +327,43 @@ async function getWorkDay(client, context, date) {
   return workDayDto(day, entries.rows);
 }
 
+async function getWorkWeek(client, context, weekStart) {
+  const days = [];
+  const start = new Date(`${weekStart}T00:00:00Z`);
+  if (start.getUTCDay() !== 1) {
+    throw new InputError("Der Wochenbeginn muss ein Montag sein.", 400, "invalid_week_start");
+  }
+  for (let offset = 0; offset < 5; offset += 1) {
+    const date = new Date(start);
+    date.setUTCDate(start.getUTCDate() + offset);
+    const workDate = date.toISOString().slice(0, 10);
+    days.push({
+      workDate,
+      workDay: await getWorkDay(client, context, workDate)
+    });
+  }
+  return {
+    weekStart,
+    weekEnd: days.at(-1).workDate,
+    days,
+    totals: days.reduce((totals, item) => {
+      if (!item.workDay) return totals;
+      totals.grossMinutes += item.workDay.grossMinutes || 0;
+      totals.breakMinutes += item.workDay.breakMinutes || 0;
+      totals.workMinutes += item.workDay.workMinutes || 0;
+      totals.travelMinutes += item.workDay.travelMinutes || 0;
+      totals.overtimeMinutes += item.workDay.overtimeMinutes || 0;
+      return totals;
+    }, {
+      grossMinutes: 0,
+      breakMinutes: 0,
+      workMinutes: 0,
+      travelMinutes: 0,
+      overtimeMinutes: 0
+    })
+  };
+}
+
 async function getAssignments(client, context, date) {
   const result = await client.query(
     `SELECT
@@ -4361,6 +4398,17 @@ export function createApp({ pool, config, limiter = new LoginRateLimiter(), logg
         const date = validateWorkDate(workDayMatch[1]);
         const day = await withReadySession(pool, tokenHash, (client, context) => getWorkDay(client, context, date));
         return json(response, 200, { workDay: day });
+      }
+
+      const workWeekMatch = /^\/api\/v1\/work-weeks\/(\d{4}-\d{2}-\d{2})$/.exec(url.pathname);
+      if (request.method === "GET" && workWeekMatch) {
+        const weekStart = validateWorkDate(workWeekMatch[1]);
+        const week = await withReadySession(
+          pool,
+          tokenHash,
+          (client, context) => getWorkWeek(client, context, weekStart)
+        );
+        return json(response, 200, { week });
       }
 
       const assignmentMatch = /^\/api\/v1\/site-assignments\/(\d{4}-\d{2}-\d{2})$/.exec(url.pathname);

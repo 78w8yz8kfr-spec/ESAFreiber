@@ -116,6 +116,12 @@
     connectionState: document.querySelector("#connection-state"),
     todayLabel: document.querySelector("#today-label"),
     weekStrip: document.querySelector("#week-strip"),
+    weekPeriod: document.querySelector("#week-period"),
+    weekTotalWork: document.querySelector("#week-total-work"),
+    weekTotalBreak: document.querySelector("#week-total-break"),
+    weekTotalTravel: document.querySelector("#week-total-travel"),
+    weekMessage: document.querySelector("#week-message"),
+    weekTimesheetList: document.querySelector("#week-timesheet-list"),
     assignmentCard: document.querySelector("#assignment-card"),
     assignmentOrder: document.querySelector("#assignment-order"),
     assignmentTitle: document.querySelector("#assignment-title"),
@@ -127,15 +133,16 @@
     workTime: document.querySelector("#work-time"),
     travelTime: document.querySelector("#travel-time"),
     entryList: document.querySelector("#entry-list"),
+    timeCorrectionDialog: document.querySelector("#time-correction-dialog"),
     timeCorrectionForm: document.querySelector("#time-correction-form"),
     timeCorrectionTitle: document.querySelector("#time-correction-title"),
+    timeCorrectionOriginal: document.querySelector("#time-correction-original"),
     timeCorrectionAt: document.querySelector("#time-correction-at"),
     timeCorrectionReason: document.querySelector("#time-correction-reason"),
     timeCorrectionSubmit: document.querySelector("#time-correction-submit"),
     timeCorrectionCancel: document.querySelector("#time-correction-cancel"),
     timeCorrectionMessage: document.querySelector("#time-correction-message"),
     timesheetSection: document.querySelector("#timesheet-section"),
-    showWeek: document.querySelector("#show-week"),
     resetDemo: document.querySelector("#reset-demo"),
     bottomNav: document.querySelector(".bottom-nav"),
     navStart: document.querySelector("#nav-start"),
@@ -421,8 +428,7 @@
   elements.assignmentPlanningContent.append(
     elements.adminWeek,
     elements.assignmentEditForm,
-    elements.assignmentPanel,
-    elements.timeCorrectionReviewPanel
+    elements.assignmentPanel
   );
   elements.sitePlanningContent.append(
     elements.businessStructurePanel,
@@ -453,6 +459,7 @@
   let syncing = false;
   let session = null;
   let adminState = null;
+  let weekState = null;
   let editingAssignmentId = null;
   let correctingTimeEntryId = null;
   let openedCustomerId = null;
@@ -548,6 +555,14 @@
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
+  }
+
+  function currentWeekStart(date = new Date()) {
+    const weekday = date.getDay() || 7;
+    const monday = new Date(date);
+    monday.setHours(12, 0, 0, 0);
+    monday.setDate(date.getDate() - weekday + 1);
+    return localDateKey(monday);
   }
 
   function initialState() {
@@ -653,7 +668,7 @@
     elements.passwordState.textContent = demoMode ? "In der Demo inaktiv" : "Sicher verschlüsselt";
     elements.loginSubmit.classList.toggle("button--secondary", demoMode);
     elements.loginSubmit.classList.toggle("button--primary", !demoMode);
-    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.27.0 ${demoMode ? "Demo" : "Online"}`;
+    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.28.0 ${demoMode ? "Demo" : "Online"}`;
 
     if (demoMode) {
       elements.modeNoteText.replaceChildren();
@@ -2113,6 +2128,7 @@
 
   function renderTimeCorrections() {
     const corrections = adminState?.timeCorrections || [];
+    elements.timeCorrectionReviewPanel.hidden = !canPlan();
     elements.timeCorrectionReviewCount.textContent = String(corrections.length);
     elements.timeCorrectionReviewList.replaceChildren();
     if (corrections.length === 0) {
@@ -2165,7 +2181,7 @@
           showToast(decision === "approved"
             ? "Zeitkorrektur genehmigt · Stundenzettel neu berechnet."
             : "Zeitkorrektur abgelehnt · Originalzeit bleibt bestehen.");
-          await Promise.all([refreshAdmin(), refreshLiveData()]);
+          await Promise.all([refreshAdmin(), refreshLiveData(), refreshWeekData()]);
         } catch (error) {
           showToast(error.message);
           approve.disabled = false;
@@ -2943,6 +2959,7 @@
 
     syncing = false;
     updateConnectionState();
+    await refreshWeekData();
   }
 
   function handlePrimaryAction() {
@@ -3143,20 +3160,23 @@
   function closeTimeCorrectionForm() {
     correctingTimeEntryId = null;
     elements.timeCorrectionForm.reset();
-    elements.timeCorrectionForm.hidden = true;
     elements.timeCorrectionMessage.textContent = "";
+    if (elements.timeCorrectionDialog.open) elements.timeCorrectionDialog.close();
   }
 
   function openTimeCorrectionForm(entry) {
     if (demoMode || entry.pendingSync || entry.syncError || entry.pendingCorrection) return;
     correctingTimeEntryId = entry.id;
     elements.timeCorrectionTitle.textContent =
-      `${timeEntryTypeLabel(entry.type)} · ${timeFormatter.format(new Date(entry.recordedAt))} Uhr`;
+      `${timeEntryTypeLabel(entry.type)} korrigieren`;
+    elements.timeCorrectionOriginal.textContent =
+      `Bisher: ${shortDate(localDateKey(new Date(entry.recordedAt)))} · ${
+        timeFormatter.format(new Date(entry.recordedAt))
+      } Uhr`;
     elements.timeCorrectionAt.value = localDateTimeInputValue(entry.recordedAt);
     elements.timeCorrectionReason.value = "";
     elements.timeCorrectionMessage.textContent = "";
-    elements.timeCorrectionForm.hidden = false;
-    elements.timeCorrectionForm.scrollIntoView({ behavior: "smooth", block: "center" });
+    elements.timeCorrectionDialog.showModal();
     window.setTimeout(() => elements.timeCorrectionAt.focus(), 250);
   }
 
@@ -3176,57 +3196,164 @@
       const content = document.createElement("div");
       const label = document.createElement("strong");
       const meta = document.createElement("span");
-      const correction = document.createElement("button");
       marker.setAttribute("aria-hidden", "true");
       label.textContent = entryLabel(entry);
       const status = demoMode
         ? "lokal vorgemerkt"
         : entry.syncError ? "Synchronisation prüfen" : entry.pendingSync ? "wartet auf Synchronisation" : "synchronisiert";
       meta.textContent = `${timeFormatter.format(new Date(entry.recordedAt))} · ${
-        entry.pendingCorrection ? "Korrektur wartet auf Prüfung" : status
+        entry.pendingCorrection ? "Änderung wird geprüft" : status
       }`;
       content.append(label, meta);
-      correction.type = "button";
-      correction.className = "entry-correction-button";
-      correction.textContent = entry.pendingCorrection ? "Angefragt" : "Korrigieren";
-      correction.disabled = Boolean(
-        demoMode
-        || entry.pendingSync
-        || entry.syncError
-        || entry.pendingCorrection
-      );
-      correction.hidden = demoMode;
-      correction.addEventListener("click", () => openTimeCorrectionForm(entry));
-      item.append(marker, content, correction);
+      item.append(marker, content);
       elements.entryList.append(item);
     });
   }
 
   function renderWeek() {
     const today = new Date();
-    const weekday = today.getDay() || 7;
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - weekday + 1);
+    const weekStart = currentWeekStart(today);
+    const fallbackTimes = calculatedTimes();
+    const fallbackDay = {
+      workDate: localDateKey(today),
+      workDay: {
+        status: lastEvent()?.type === "clock_out" ? "closed" : state.events.length ? "open" : null,
+        grossMinutes: fallbackTimes.gross,
+        breakMinutes: fallbackTimes.pause,
+        workMinutes: fallbackTimes.work,
+        travelMinutes: fallbackTimes.travel,
+        entries: state.events.map((entry) => ({
+          id: entry.id,
+          entryType: entry.type,
+          recordedAt: entry.recordedAt,
+          pendingCorrection: entry.pendingCorrection
+        }))
+      }
+    };
+    const visibleWeek = weekState?.weekStart === weekStart
+      ? weekState
+      : {
+          weekStart,
+          weekEnd: addIsoDays(weekStart, 4),
+          days: Array.from({ length: 5 }, (_, offset) => {
+            const workDate = addIsoDays(weekStart, offset);
+            return workDate === fallbackDay.workDate ? fallbackDay : { workDate, workDay: null };
+          }),
+          totals: {
+            workMinutes: fallbackTimes.work,
+            breakMinutes: fallbackTimes.pause,
+            travelMinutes: fallbackTimes.travel
+          }
+        };
+    const periodStart = dateFromIso(visibleWeek.weekStart);
+    const periodEnd = dateFromIso(visibleWeek.weekEnd);
+    elements.weekPeriod.textContent = `${
+      periodStart.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })
+    } – ${periodEnd.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}`;
+    elements.weekTotalWork.textContent = formatMinutes(visibleWeek.totals.workMinutes || 0);
+    elements.weekTotalBreak.textContent = formatMinutes(visibleWeek.totals.breakMinutes || 0);
+    elements.weekTotalTravel.textContent = formatMinutes(visibleWeek.totals.travelMinutes || 0);
     elements.weekStrip.replaceChildren();
+    elements.weekTimesheetList.replaceChildren();
 
-    for (let offset = 0; offset < 5; offset += 1) {
-      const date = new Date(monday);
-      date.setDate(monday.getDate() + offset);
-      const item = document.createElement("div");
+    visibleWeek.days.forEach(({ workDate, workDay }) => {
+      const date = dateFromIso(workDate);
+      const item = document.createElement("button");
       const dayName = shortDayFormatter.format(date).replace(".", "");
-      const isToday = localDateKey(date) === localDateKey(today);
+      const isToday = workDate === localDateKey(today);
       item.className = `day-pill${isToday ? " day-pill--today" : ""}`;
+      item.type = "button";
       item.setAttribute("aria-label", `${dayName}, ${date.getDate()}.`);
       const name = document.createElement("span");
       const number = document.createElement("strong");
       const status = document.createElement("i");
       name.textContent = dayName;
       number.textContent = String(date.getDate());
-      status.textContent = isToday && state.events.length ? "●" : "";
+      status.textContent = workDay?.entries?.length ? "●" : "";
       status.setAttribute("aria-hidden", "true");
       item.append(name, number, status);
+      item.addEventListener("click", () => {
+        document.querySelector(`#week-day-${workDate}`)?.scrollIntoView({
+          behavior: "smooth",
+          block: "center"
+        });
+      });
       elements.weekStrip.append(item);
-    }
+
+      const dayCard = document.createElement("section");
+      const heading = document.createElement("div");
+      const headingCopy = document.createElement("div");
+      const dateLabel = document.createElement("strong");
+      const dayStatus = document.createElement("span");
+      const total = document.createElement("strong");
+      dayCard.id = `week-day-${workDate}`;
+      dayCard.className = `week-timesheet-day${isToday ? " week-timesheet-day--today" : ""}`;
+      heading.className = "week-timesheet-day__heading";
+      dateLabel.textContent = date.toLocaleDateString("de-DE", {
+        weekday: "long",
+        day: "2-digit",
+        month: "2-digit"
+      });
+      dayStatus.textContent = !workDay
+        ? "Keine Buchung"
+        : workDay.status === "closed" ? "Abgeschlossen" : "Läuft";
+      total.textContent = formatMinutes(workDay?.workMinutes || 0);
+      headingCopy.append(dateLabel, dayStatus);
+      heading.append(headingCopy, total);
+      dayCard.append(heading);
+
+      if (!workDay?.entries?.length) {
+        const empty = document.createElement("p");
+        empty.className = "week-timesheet-day__empty";
+        empty.textContent = "Für diesen Tag sind keine Zeiten erfasst.";
+        dayCard.append(empty);
+      } else {
+        const metrics = document.createElement("div");
+        metrics.className = "week-day-metrics";
+        [
+          ["Brutto", workDay.grossMinutes],
+          ["Pause", workDay.breakMinutes],
+          ["Fahrt", workDay.travelMinutes]
+        ].forEach(([labelText, minutes]) => {
+          const metric = document.createElement("span");
+          metric.textContent = `${labelText} ${formatMinutes(minutes || 0)}`;
+          metrics.append(metric);
+        });
+        const entries = document.createElement("div");
+        entries.className = "week-day-entries";
+        workDay.entries.forEach((entry) => {
+          const row = document.createElement("button");
+          const copy = document.createElement("span");
+          const label = document.createElement("strong");
+          const meta = document.createElement("small");
+          const action = document.createElement("span");
+          row.type = "button";
+          row.className = "week-time-entry";
+          label.textContent = timeEntryTypeLabel(entry.entryType);
+          meta.textContent = timeFormatter.format(new Date(entry.recordedAt));
+          action.textContent = entry.pendingCorrection ? "Prüfung offen" : "Ändern";
+          action.className = entry.pendingCorrection
+            ? "week-time-entry__pending"
+            : "week-time-entry__action";
+          copy.append(label, meta);
+          row.append(copy, action);
+          row.disabled = demoMode || Boolean(entry.pendingCorrection);
+          if (!row.disabled) {
+            row.addEventListener("click", () => openTimeCorrectionForm({
+              id: entry.id,
+              type: entry.entryType,
+              recordedAt: entry.recordedAt,
+              pendingCorrection: entry.pendingCorrection,
+              pendingSync: false,
+              syncError: null
+            }));
+          }
+          entries.append(row);
+        });
+        dayCard.append(metrics, entries);
+      }
+      elements.weekTimesheetList.append(dayCard);
+    });
   }
 
   function render() {
@@ -3268,7 +3395,7 @@
 
   function showDashboardPane(pane, smooth = true) {
     if (pane !== "start") closeMobileReportForm();
-    if (pane !== "start") closeTimeCorrectionForm();
+    if (pane !== "week") closeTimeCorrectionForm();
     const adminPanes = new Set(["assignments", "sites", "more"]);
     elements.dashboardPanes.forEach((element) => {
       if (element === elements.adminSection) {
@@ -3326,6 +3453,34 @@
     }));
   }
 
+  async function refreshWeekData() {
+    if (demoMode) {
+      weekState = null;
+      elements.weekMessage.textContent = "";
+      renderWeek();
+      return;
+    }
+    if (!navigator.onLine) {
+      elements.weekMessage.textContent = "Die zuletzt geladenen Wochenzeiten werden angezeigt.";
+      renderWeek();
+      return;
+    }
+    elements.weekMessage.textContent = "Stundenzettel wird geladen …";
+    try {
+      const body = await requestJson(`./api/v1/work-weeks/${currentWeekStart()}`);
+      weekState = body.week;
+      elements.weekMessage.textContent = "";
+      renderWeek();
+    } catch (error) {
+      if (error.status === 401) showLogin();
+      else {
+        elements.weekMessage.textContent = error.network
+          ? "Die Wochenzeiten konnten gerade nicht aktualisiert werden."
+          : error.message;
+      }
+    }
+  }
+
   async function refreshLiveData() {
     if (demoMode || !navigator.onLine) return;
     const date = localDateKey();
@@ -3360,6 +3515,7 @@
       state = initialState();
       assignments = [];
       adminState = null;
+      weekState = null;
       employeeSiteState = null;
     }
     session = sessionView;
@@ -3376,7 +3532,7 @@
     elements.closePreview.textContent = (session.user.firstName[0] || "A").toUpperCase();
     if (!elements.assignmentDate.value) elements.assignmentDate.value = localDateKey();
     showDashboard();
-    await Promise.all([refreshLiveData(), refreshAdmin()]);
+    await Promise.all([refreshLiveData(), refreshWeekData(), refreshAdmin()]);
     await syncPendingEntries();
   }
 
@@ -4562,8 +4718,8 @@
         })
       });
       closeTimeCorrectionForm();
-      await Promise.all([refreshLiveData(), refreshAdmin()]);
-      showToast("Korrektur eingereicht · bis zur Prüfung bleibt die Originalzeit bestehen.");
+      await Promise.all([refreshLiveData(), refreshWeekData(), refreshAdmin()]);
+      showToast("Änderung eingereicht · die bisherige Zeit bleibt bis zur Prüfung erhalten.");
     } catch (error) {
       if (error.status === 401) showLogin();
       else elements.timeCorrectionMessage.textContent = error.message;
@@ -4573,8 +4729,12 @@
     }
   });
   elements.timeCorrectionCancel.addEventListener("click", closeTimeCorrectionForm);
-  elements.showWeek.addEventListener("click", () => {
-    showDashboardPane("week");
+  elements.timeCorrectionDialog.addEventListener("click", (event) => {
+    if (event.target === elements.timeCorrectionDialog) closeTimeCorrectionForm();
+  });
+  elements.timeCorrectionDialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeTimeCorrectionForm();
   });
   elements.resetDemo.addEventListener("click", () => {
     if (!demoMode || !window.confirm("Alle lokalen Demo-Buchungen auf diesem Gerät zurücksetzen?")) return;
@@ -4589,6 +4749,7 @@
   });
   elements.navWeek.addEventListener("click", () => {
     showDashboardPane("week");
+    void refreshWeekData();
   });
   elements.navAssignments.addEventListener("click", () => {
     showDashboardPane("assignments");

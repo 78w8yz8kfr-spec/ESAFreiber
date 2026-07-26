@@ -1416,6 +1416,20 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   assert.equal(workDay.status, 200);
   assert.equal((await workDay.json()).workDay.entries.length, 4);
 
+  const workDateValue = new Date(`${workDate}T00:00:00Z`);
+  const weekday = workDateValue.getUTCDay() || 7;
+  workDateValue.setUTCDate(workDateValue.getUTCDate() - weekday + 1);
+  const weekStart = workDateValue.toISOString().slice(0, 10);
+  const workWeekResponse = await fetch(`${baseUrl}/api/v1/work-weeks/${weekStart}`, {
+    headers: { Cookie: cookie }
+  });
+  assert.equal(workWeekResponse.status, 200);
+  const workWeek = (await workWeekResponse.json()).week;
+  assert.equal(workWeek.weekStart, weekStart);
+  assert.equal(workWeek.days.length, 5);
+  assert.ok(workWeek.days.some((day) => day.workDate === workDate && day.workDay.entries.length === 4));
+  assert.ok(workWeek.totals.workMinutes >= 0);
+
   const correctedClockOutAt = new Date(Date.now() - 500).toISOString();
   const correctionResponse = await fetch(`${baseUrl}/api/v1/time-entry-corrections`, {
     method: "POST",

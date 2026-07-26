@@ -30,6 +30,9 @@ assert.match(html, /id="login-view"/);
 assert.match(html, /id="dashboard-view"/);
 assert.match(html, /id="open-preview"/);
 assert.match(html, /id="timesheet-section"/);
+assert.match(html, /id="week-timesheet-list"/);
+assert.match(html, /id="week-total-work"/);
+assert.match(html, /id="time-correction-dialog"/);
 assert.match(html, /id="time-correction-form"/);
 assert.match(html, /id="time-correction-review-panel"/);
 assert.match(html, /id="time-correction-review-list"/);
@@ -127,9 +130,9 @@ assert.doesNotMatch(html, /<section id="assignment-import-panel"[^>]*hidden>/);
 assert.doesNotMatch(html, /<section id="site-import-panel"[^>]*hidden>/);
 assert.doesNotMatch(html, /id="assignment-import-body" class="inline-import__body" hidden/);
 assert.doesNotMatch(html, /id="site-import-body" class="inline-import__body" hidden/);
-assert.match(html, /styles\.css\?v=0\.27\.0/);
-assert.match(html, /app\.js\?v=0\.27\.0/);
-assert.match(html, /version\.js\?v=0\.27\.0/);
+assert.match(html, /styles\.css\?v=0\.28\.0/);
+assert.match(html, /app\.js\?v=0\.28\.0/);
+assert.match(html, /version\.js\?v=0\.28\.0/);
 assert.match(html, /id="mobile-report-card"/);
 assert.match(html, /id="mobile-report-form"/);
 assert.match(html, /id="mobile-report-personnel-list"/);
@@ -165,7 +168,9 @@ assert.match(styles, /\.time-summary/);
 assert.match(styles, /\.status-timer/);
 assert.doesNotMatch(styles, /\.live-overview/);
 assert.match(styles, /\.entry-list/);
-assert.match(styles, /\.entry-correction-button/);
+assert.match(styles, /\.week-time-entry__action/);
+assert.match(styles, /\.week-timesheet-day/);
+assert.match(styles, /\.time-correction-dialog/);
 assert.match(styles, /\.time-correction-form/);
 assert.match(styles, /\.time-correction-review-actions/);
 assert.match(styles, /\.import-preview/);
@@ -269,9 +274,11 @@ assert.match(app, /Arbeitstag erneut starten/);
 assert.match(app, /latest\.type === "clock_out"\) addEntry\("clock_in"\)/);
 assert.match(app, /const explicitPause = Math\.max\(gross - recordedWork, 0\)/);
 assert.match(app, /liveDuration\.textContent = formatMinutes\(times\.work\)/);
+assert.match(app, /\.\/api\/v1\/work-weeks\//);
 assert.match(app, /\.\/api\/v1\/time-entry-corrections/);
 assert.match(app, /\.\/api\/v1\/admin\/time-entry-corrections\//);
-assert.match(app, /Korrektur wartet auf Prüfung/);
+assert.match(app, /Änderung wird geprüft/);
+assert.match(app, /Prüfung offen/);
 assert.match(app, /renderTimeCorrections/);
 assert.doesNotMatch(app, /liveDuration\.textContent = formatMinutes\(times\.gross\)/);
 assert.doesNotMatch(app, /geolocation/i, "Die Demo darf keine GPS- oder Standortabfrage enthalten");
@@ -298,9 +305,9 @@ for (const asset of [
 ]) {
   assert.ok(worker.includes(`"${asset}"`), `${asset} fehlt im App-Shell-Cache`);
 }
-assert.ok(worker.includes('"./styles.css?v=0.27.0"'));
-assert.ok(worker.includes('"./app.js?v=0.27.0"'));
-assert.ok(worker.includes('"./version.js?v=0.27.0"'));
+assert.ok(worker.includes('"./styles.css?v=0.28.0"'));
+assert.ok(worker.includes('"./app.js?v=0.28.0"'));
+assert.ok(worker.includes('"./version.js?v=0.28.0"'));
 assert.match(
   styles,
   /\.login-form input,\s*\.admin-form input,\s*\.admin-form select\s*\{\s*height: 52px;/,

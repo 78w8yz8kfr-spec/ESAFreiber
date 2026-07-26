@@ -8,9 +8,9 @@
     <title>Schäfchen</title>
     <link rel="icon" href="./assets/mark.svg" type="image/svg+xml">
     <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="stylesheet" href="./styles.css?v=0.27.0">
-    <script src="./app.js?v=0.27.0" defer></script>
-    <script src="./version.js?v=0.27.0" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=0.28.0">
+    <script src="./app.js?v=0.28.0" defer></script>
+    <script src="./version.js?v=0.28.0" defer></script>
   </head>
   <body>
     <main id="app" class="app-shell">
@@ -124,7 +124,7 @@
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
           </button>
 
-          <p id="login-footer" class="login-footer">Einfach vor komplex · Version 0.27.0</p>
+          <p id="login-footer" class="login-footer">Einfach vor komplex · Version 0.28.0</p>
         </div>
       </section>
 
@@ -410,38 +410,64 @@
             <ol id="entry-list" class="entry-list" aria-label="Lokale Zeitbuchungen">
               <li class="entry-list__empty">Noch keine Buchung.</li>
             </ol>
-            <form id="time-correction-form" class="time-correction-form" novalidate hidden>
+          </section>
+
+          <section id="week-section" class="section" data-dashboard-pane="week" aria-labelledby="week-title" hidden>
+            <div class="section-heading week-heading">
+              <div>
+                <p class="eyebrow">Deine erfassten Zeiten</p>
+                <h2 id="week-title">Stundenzettel</h2>
+              </div>
+              <strong id="week-period" class="week-period">Diese Woche</strong>
+            </div>
+            <div id="week-strip" class="week-strip" role="group" aria-label="Aktuelle Woche"></div>
+            <div class="week-totals" aria-label="Wochensummen">
+              <div><span>Arbeit</span><strong id="week-total-work">00:00</strong></div>
+              <div><span>Pause</span><strong id="week-total-break">00:00</strong></div>
+              <div><span>Fahrt</span><strong id="week-total-travel">00:00</strong></div>
+            </div>
+            <p id="week-message" class="form-message week-message" aria-live="polite"></p>
+            <div id="week-timesheet-list" class="week-timesheet-list" aria-label="Stundenzettel der Woche"></div>
+
+            <section id="time-correction-review-panel" class="week-review-panel" aria-labelledby="time-correction-review-title" hidden>
+              <div class="site-management-panel__heading">
+                <div>
+                  <p class="eyebrow">Prüfung im Büro</p>
+                  <h3 id="time-correction-review-title">Offene Korrekturen</h3>
+                </div>
+                <span id="time-correction-review-count" class="site-list-summary" aria-live="polite">0</span>
+              </div>
+              <ul id="time-correction-review-list" class="admin-list time-correction-review-list" aria-label="Offene Zeitkorrekturen"></ul>
+            </section>
+          </section>
+
+          <dialog id="time-correction-dialog" class="time-correction-dialog" aria-labelledby="time-correction-title">
+            <form id="time-correction-form" class="time-correction-form" method="dialog" novalidate>
               <div class="time-correction-form__heading">
                 <div>
-                  <p class="eyebrow">Historisch nachvollziehbar</p>
-                  <strong id="time-correction-title">Buchung korrigieren</strong>
+                  <p class="eyebrow">Zeitbuchung ändern</p>
+                  <h2 id="time-correction-title">Uhrzeit korrigieren</h2>
+                  <p id="time-correction-original" class="time-correction-original"></p>
                 </div>
-                <button id="time-correction-cancel" class="text-button" type="button">Abbrechen</button>
+                <button id="time-correction-cancel" class="dialog-close" type="button" aria-label="Korrektur schließen">×</button>
               </div>
-              <label for="time-correction-at">Richtige Uhrzeit</label>
+              <label for="time-correction-at">Korrigierte Uhrzeit</label>
               <input id="time-correction-at" type="datetime-local" step="60" required>
-              <label for="time-correction-reason">Begründung</label>
+              <label for="time-correction-reason">Warum wird die Zeit geändert?</label>
               <textarea
                 id="time-correction-reason"
                 maxlength="500"
                 rows="3"
-                placeholder="z. B. Feierabend versehentlich zu früh gebucht"
+                placeholder="Kurze Begründung"
                 required
               ></textarea>
               <button id="time-correction-submit" class="button button--primary" type="submit">
-                Korrektur zur Prüfung senden
+                Änderung einreichen
               </button>
+              <p class="time-correction-note">Die bisherige Zeit bleibt sichtbar, bis das Büro die Änderung geprüft hat.</p>
               <p id="time-correction-message" class="form-message" aria-live="polite"></p>
             </form>
-          </section>
-
-          <section id="week-section" class="section" data-dashboard-pane="week" aria-labelledby="week-title" hidden>
-            <div class="section-heading">
-              <h2 id="week-title">Diese Woche</h2>
-              <button id="show-week" class="text-button" type="button">Alle Tage</button>
-            </div>
-            <div id="week-strip" class="week-strip" role="group" aria-label="Aktuelle Woche"></div>
-          </section>
+          </dialog>
 
           <section id="admin-section" class="section admin-section" data-dashboard-pane="more" aria-labelledby="admin-title" hidden>
             <div class="section-heading">
@@ -1305,16 +1331,6 @@
               <ul id="admin-assignment-list" class="admin-list" aria-label="Freigegebene Einsätze"></ul>
             </details>
 
-            <section id="time-correction-review-panel" class="site-management-panel time-correction-review-panel" aria-labelledby="time-correction-review-title">
-              <div class="site-management-panel__heading">
-                <div>
-                  <p class="eyebrow">Stundenzettel prüfen</p>
-                  <h3 id="time-correction-review-title">Offene Zeitkorrekturen</h3>
-                </div>
-                <span id="time-correction-review-count" class="site-list-summary" aria-live="polite">0</span>
-              </div>
-              <ul id="time-correction-review-list" class="admin-list time-correction-review-list" aria-label="Offene Zeitkorrekturen"></ul>
-            </section>
           </section>
 
           <aside class="info-card" data-dashboard-pane="more" hidden>

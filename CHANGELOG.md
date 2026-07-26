@@ -4,11 +4,20 @@ Alle wesentlichen Änderungen an Schäfchen werden in dieser Datei dokumentiert.
 
 ## [Unreleased]
 
+### V0.28.0 – Wochen-Stundenzettel
+
+- neuer vollständiger Wochen-Stundenzettel mit Arbeit, Pause und Fahrt als Wochensumme
+- Montag bis Freitag werden als ruhige Tageskarten mit Status, Tageswerten und allen einzelnen Buchungen dargestellt
+- Zeitkorrekturen bleiben erhalten, werden aber ausschließlich an der passenden Buchung im Wochen-Stundenzettel geöffnet
+- Korrekturen erscheinen als kompakte mobile Eingabefläche; bis zur Prüfung bleibt die bisherige Uhrzeit sichtbar
+- offene Korrekturen liegen für berechtigte Bürorollen direkt im Bereich Woche statt in der Einsatzplanung
+- neuer geschützter Wochenendpunkt liefert die eigenen fünf Arbeitstage einschließlich wirksamer Buchungen und Wochensummen
+
 ### V0.27.0 – Nachvollziehbare Zeitkorrekturen
 
 - Mitarbeiter können eine synchronisierte eigene Zeitbuchung direkt im Stundenzettel mit neuer Uhrzeit und Pflichtbegründung zur Prüfung einreichen
 - bis zur Entscheidung bleibt ausschließlich die unveränderte Originalzeit wirksam
-- offene Korrekturen erscheinen mit alter und gewünschter Uhrzeit direkt in der Einsatzplanung
+- offene Korrekturen erscheinen mit alter und gewünschter Uhrzeit zur Prüfung im Stundenzettel
 - Planung und Geschäftsführung können Anträge genehmigen oder ablehnen; Genehmigungen entwerten das Original historisch und berechnen den Stundenzettel neu
 - API prüft Mandant, Eigentümer, Arbeitstag, Zeitreihenfolge und Baustellenfolge vor Antrag und Genehmigung
 - Validierungs-, PostgreSQL-Integrations- und PWA-Smoke-Tests sichern den vollständigen Ablauf

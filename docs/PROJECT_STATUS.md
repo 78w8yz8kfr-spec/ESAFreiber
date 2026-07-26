@@ -1,14 +1,15 @@
 # Projektstatus
 
 Stand: 26.07.2026
-Technischer Stand: V0.27.0
+Technischer Stand: V0.28.0
 
 ## Abgeschlossen
 
 - Login-Darstellung mit ursprünglicher Feldhöhe und korrekt positionierter Passwortanzeige wiederhergestellt
 - große Stundenzettel-Anzeige auf Netto-Arbeitszeit umgestellt; Pausen und Unterbrechungen bleiben getrennt nachvollziehbar
+- eigener Wochen-Stundenzettel mit Tageskarten, Wochensummen und allen wirksamen Buchungen
 - eigene synchronisierte Zeitbuchungen können mit neuer Uhrzeit und Pflichtbegründung zur Korrektur eingereicht werden
-- offene Zeitkorrekturen werden in der Einsatzplanung geprüft; nur eine Genehmigung ändert den Stundenzettel und bewahrt das Original historisch
+- Zeitkorrekturen werden an der betroffenen Wochenbuchung geöffnet und im Stundenzettel geprüft; nur eine Genehmigung ändert die Zeit und bewahrt das Original historisch
 - Mandanten-, Eigentümer-, Tages-, Zeitreihenfolge- und Baustellenfolgeprüfung schützen Antrag und Entscheidung serverseitig
 
 - Phase 0: Vision, Anforderungen, Rollenmodell und ER-Struktur mit 20 Kerntabellen

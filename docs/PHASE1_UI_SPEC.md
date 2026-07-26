@@ -31,7 +31,7 @@ Frontend ausgibt.
 - große primäre Schaltfläche für den nächsten Arbeitsschritt
 - zwei gekennzeichnete Demo-Einsätze in verbindlicher Reihenfolge
 - lokaler Live-Stundenzettel für Brutto-, Pausen-, Arbeits- und Fahrzeit
-- kompakte Wochenübersicht
+- vollständiger Wochen-Stundenzettel mit Tageskarten und Summen für Arbeit, Pause und Fahrt
 - Navigation: Start, Woche und Mehr
 - keine Berichts- oder Verwaltungsfunktionen vor ihrer Entwicklungsphase
 
@@ -77,13 +77,16 @@ API stellt mindestens folgende Endpunkte bereit, bevor der Login produktiv wird:
 - `GET /api/v1/dashboard` – rollenabhängige Startdaten liefern
 - `POST /api/v1/time-entries` – Client-ID idempotent synchronisieren
 - `GET /api/v1/work-days/{date}` – berechneten Tagesstand laden
+- `GET /api/v1/work-weeks/{montag}` – eigene Arbeitswoche mit Buchungen und Summen laden
 - `POST /api/v1/time-entry-corrections` – begründete Korrektur beantragen
 - `PATCH /api/v1/admin/time-entry-corrections/{id}` – Korrektur genehmigen oder ablehnen
 
-Im Online-Modus besitzt jede bereits synchronisierte Buchung eine kompakte
-Korrekturaktion. Der Mitarbeiter gibt die richtige Uhrzeit und einen Grund an;
-die ursprüngliche Buchung bleibt bis zur Entscheidung sichtbar und wirksam.
-Offene Anträge erscheinen in der Einsatzplanung und zeigen der berechtigten
-Organisation alte Uhrzeit, neue Uhrzeit und Begründung.
+Die chronologische Liste im Startbereich bleibt eine ruhige Live-Anzeige ohne
+Bearbeitungsbedienelemente. Im Wochen-Stundenzettel besitzt jede bereits
+synchronisierte Buchung die Aktion `Ändern`. Der Mitarbeiter gibt in einer
+kompakten mobilen Korrekturfläche die richtige Uhrzeit und einen Grund an; die
+ursprüngliche Buchung bleibt bis zur Entscheidung sichtbar und wirksam. Offene
+Anträge erscheinen für berechtigte Rollen direkt unter dem Wochen-Stundenzettel
+mit alter Uhrzeit, neuer Uhrzeit und Begründung.
 
 Passwörter, Passwort-Hashes und `company_id` werden nie vom Frontend verwaltet.

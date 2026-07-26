@@ -1,11 +1,17 @@
 # Sprint 2: Planung und Zeiterfassung
 
 Stand: 26.07.2026
-Technischer Stand: V0.27.0
+Technischer Stand: V0.28.0
 
 Dieses Dokument beschreibt die verbindlichen Regeln der Migrationen 009 bis
 012. Der Sprint verbindet Wochenplanung, Vorarbeiterverantwortung,
 Offline-Zeitereignisse und den berechneten Stundenzettel.
+
+Die PWA stellt den berechneten Stundenzettel zusätzlich als vollständige
+Arbeitswoche dar. `GET /api/v1/work-weeks/{montag}` liefert Montag bis Freitag,
+die wirksamen eigenen Buchungen und die Summen für Brutto, Pause, Arbeit,
+Fahrt und Mehrzeit. Eine Korrektur wird direkt an der betreffenden
+Wochenbuchung begonnen; der laufende Arbeitstag bleibt dadurch ruhig.
 
 ## Gemeinsame Regeln
 
