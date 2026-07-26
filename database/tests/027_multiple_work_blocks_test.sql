@@ -6,7 +6,7 @@ DO $$
 DECLARE
     target_company_id UUID;
     employee_id UUID;
-    work_day_id UUID;
+    target_work_day_id UUID;
 BEGIN
     SELECT id INTO target_company_id
     FROM companies
@@ -20,29 +20,29 @@ BEGIN
         company_id, user_id, work_date, target_work_minutes
     ) VALUES (
         target_company_id, employee_id, DATE '2026-07-26', 420
-    ) RETURNING id INTO work_day_id;
+    ) RETURNING id INTO target_work_day_id;
 
     INSERT INTO time_entries (
         company_id, user_id, work_day_id, entry_type, recorded_at,
         client_entry_id, client_created_at, source, entered_by_user_id
     ) VALUES
         (
-            target_company_id, employee_id, work_day_id, 'clock_in',
+            target_company_id, employee_id, target_work_day_id, 'clock_in',
             TIMESTAMPTZ '2026-07-26 07:00:00+02', gen_random_uuid(),
             TIMESTAMPTZ '2026-07-26 07:00:01+02', 'employee', employee_id
         ),
         (
-            target_company_id, employee_id, work_day_id, 'clock_out',
+            target_company_id, employee_id, target_work_day_id, 'clock_out',
             TIMESTAMPTZ '2026-07-26 12:00:00+02', gen_random_uuid(),
             TIMESTAMPTZ '2026-07-26 12:00:01+02', 'employee', employee_id
         ),
         (
-            target_company_id, employee_id, work_day_id, 'clock_in',
+            target_company_id, employee_id, target_work_day_id, 'clock_in',
             TIMESTAMPTZ '2026-07-26 14:00:00+02', gen_random_uuid(),
             TIMESTAMPTZ '2026-07-26 14:00:01+02', 'employee', employee_id
         ),
         (
-            target_company_id, employee_id, work_day_id, 'clock_out',
+            target_company_id, employee_id, target_work_day_id, 'clock_out',
             TIMESTAMPTZ '2026-07-26 16:00:00+02', gen_random_uuid(),
             TIMESTAMPTZ '2026-07-26 16:00:01+02', 'employee', employee_id
         );
@@ -50,7 +50,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1
         FROM work_days AS day
-        WHERE day.id = work_day_id
+        WHERE day.id = target_work_day_id
           AND day.first_clock_in_at = TIMESTAMPTZ '2026-07-26 07:00:00+02'
           AND day.last_clock_out_at = TIMESTAMPTZ '2026-07-26 16:00:00+02'
           AND day.gross_minutes = 540
@@ -67,7 +67,7 @@ BEGIN
         FROM time_entries AS entry
         WHERE entry.company_id = target_company_id
           AND entry.user_id = employee_id
-          AND entry.work_day_id = work_day_id
+          AND entry.work_day_id = target_work_day_id
           AND entry.entry_type = 'clock_in'
     ) <> 2 THEN
         RAISE EXCEPTION 'Der zweite Arbeitsbeginn wurde nicht historisch erhalten';
