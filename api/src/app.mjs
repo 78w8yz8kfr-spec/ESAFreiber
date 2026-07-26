@@ -42,6 +42,7 @@ import {
   validateDocumentStatusUpdate,
   validateDocumentUpload,
   validateEmployee,
+  validateEmployeeUpdate,
   validateId,
   validateInitialPasswordChange,
   validateInitialSetup,
@@ -281,6 +282,7 @@ async function getAssignments(client, context, date) {
        assignment.status,
        assignment.comment,
        assignment.report_responsible,
+       assignment.report_responsibility_source,
        report.id AS mobile_report_id,
        report.report_number AS mobile_report_number,
        report.status AS mobile_report_status,
@@ -318,6 +320,7 @@ async function getAssignments(client, context, date) {
     status: row.status,
     comment: row.comment,
     reportResponsible: row.report_responsible,
+    reportResponsibilitySource: row.report_responsibility_source,
     mobileReport: row.mobile_report_id ? {
       id: row.mobile_report_id,
       number: row.mobile_report_number,
@@ -384,7 +387,8 @@ function employeeDto(row) {
     firstName: row.first_name,
     lastName: row.last_name,
     roles: row.roles,
-    mustChangePassword: row.must_change_password
+    mustChangePassword: row.must_change_password,
+    rowVersion: Number(row.row_version || 1)
   };
 }
 
@@ -511,6 +515,12 @@ function siteReportDto(row) {
     sourceMode: row.source_mode,
     summary: row.summary,
     details: row.details,
+    structuredData: row.structured_data || {
+      workPerformed: row.details || row.summary,
+      obstructions: null,
+      openItems: null,
+      personnel: []
+    },
     sourceDocumentId: row.source_document_id,
     siteAssignmentId: row.site_assignment_id || null,
     clientReportId: row.client_report_id || null,
@@ -576,7 +586,7 @@ async function adminOverview(client, context, date) {
   ] = await Promise.all([
     client.query(
       `SELECT account.id, account.personnel_number, account.first_name, account.last_name,
-              account.must_change_password,
+              account.must_change_password, account.row_version,
               COALESCE(
                 jsonb_agg(role.role_key ORDER BY role.role_key)
                   FILTER (WHERE role.id IS NOT NULL),
@@ -661,7 +671,7 @@ async function adminOverview(client, context, date) {
       `SELECT assignment.id, assignment.user_id, assignment.construction_site_id,
               assignment.work_date,
               assignment.sequence_number, assignment.planned_start_time::TEXT,
-              assignment.report_responsible,
+              assignment.report_responsible, assignment.report_responsibility_source,
               account.first_name, account.last_name, site.name AS site_name
        FROM site_assignments AS assignment
        JOIN users AS account
@@ -738,7 +748,7 @@ async function adminOverview(client, context, date) {
     client.query(
       `SELECT report.id, report.construction_site_id, report.report_number,
               report.report_type, report.work_date, report.source_mode,
-              report.summary, report.details, report.source_document_id,
+              report.summary, report.details, report.structured_data, report.source_document_id,
               report.site_assignment_id, report.client_report_id,
               report.status, report.approved_at, report.employee_signature_name,
               report.customer_signature_name, report.final_document_id,
@@ -770,6 +780,7 @@ async function adminOverview(client, context, date) {
     sequenceNumber: row.sequence_number,
     plannedStartTime: row.planned_start_time,
     reportResponsible: row.report_responsible,
+    reportResponsibilitySource: row.report_responsibility_source,
     employeeName: `${row.first_name} ${row.last_name}`,
     siteName: row.site_name
   }));
@@ -794,7 +805,6 @@ async function adminOverview(client, context, date) {
 async function requireSiteWorkspaceAccess(client, context, constructionSiteId, date) {
   const roles = await activeRoleKeys(client, context);
   const canManage = [...roles].some((role) => PLANNER_ROLES.has(role));
-  const canLead = canManage || roles.has("foreman");
   const assignment = await client.query(
     `SELECT id, report_responsible
      FROM site_assignments
@@ -807,6 +817,9 @@ async function requireSiteWorkspaceAccess(client, context, constructionSiteId, d
      LIMIT 1`,
     [context.companyId, context.userId, constructionSiteId, date]
   );
+  const canLead = canManage
+    || roles.has("foreman")
+    || Boolean(assignment.rows[0]?.report_responsible);
 
   if (!canManage && assignment.rowCount !== 1) {
     throw new InputError(
@@ -852,7 +865,8 @@ async function getSiteWorkspace(client, context, constructionSiteId, date) {
   const [teamResult, documentResult, taskResult, materialResult, reportResult] = await Promise.all([
     client.query(
       `SELECT account.id, account.first_name, account.last_name,
-              assignment.report_responsible,
+              BOOL_OR(assignment.report_responsible) AS report_responsible,
+              MAX(assignment.planned_duration_minutes) AS planned_duration_minutes,
               COALESCE(
                 jsonb_agg(DISTINCT role.role_key)
                   FILTER (WHERE role.id IS NOT NULL),
@@ -873,8 +887,9 @@ async function getSiteWorkspace(client, context, constructionSiteId, date) {
          AND assignment.construction_site_id = $2
          AND assignment.work_date = $3
          AND assignment.status IN ('released', 'completed')
-       GROUP BY account.id, assignment.report_responsible
-       ORDER BY assignment.report_responsible DESC, LOWER(account.last_name), LOWER(account.first_name)`,
+       GROUP BY account.id
+       ORDER BY BOOL_OR(assignment.report_responsible) DESC,
+                LOWER(account.last_name), LOWER(account.first_name)`,
       [context.companyId, constructionSiteId, date]
     ),
     client.query(
@@ -926,7 +941,7 @@ async function getSiteWorkspace(client, context, constructionSiteId, date) {
     client.query(
       `SELECT report.id, report.construction_site_id, report.report_number,
               report.report_type, report.work_date, report.source_mode,
-              report.summary, report.details, report.source_document_id,
+              report.summary, report.details, report.structured_data, report.source_document_id,
               report.site_assignment_id, report.client_report_id,
               report.status, report.approved_at, report.employee_signature_name,
               report.customer_signature_name, report.final_document_id,
@@ -965,7 +980,10 @@ async function getSiteWorkspace(client, context, constructionSiteId, date) {
       id: row.id,
       name: `${row.first_name} ${row.last_name}`,
       roles: row.roles,
-      reportResponsible: row.report_responsible
+      reportResponsible: row.report_responsible,
+      plannedDurationMinutes: row.planned_duration_minutes === null
+        ? null
+        : Number(row.planned_duration_minutes)
     })),
     documents: documentResult.rows.map(siteWorkspaceDocumentDto),
     tasks: taskResult.rows.map(siteTaskDto),
@@ -1355,7 +1373,7 @@ async function getSiteReportRecord(client, context, reportId) {
   const result = await client.query(
     `SELECT report.id, report.construction_site_id, report.report_number,
             report.report_type, report.work_date, report.source_mode,
-            report.summary, report.details, report.source_document_id,
+            report.summary, report.details, report.structured_data, report.source_document_id,
             report.site_assignment_id, report.client_report_id,
             report.status, report.approved_at, report.employee_signature_name,
             report.customer_signature_name, report.final_document_id,
@@ -1380,6 +1398,51 @@ async function getSiteReportRecord(client, context, reportId) {
   return siteReportDto(result.rows[0]);
 }
 
+async function resolveReportPersonnel(client, context, constructionSiteId, workDate, personnel) {
+  if (personnel.length === 0) return [];
+  const requestedIds = personnel.map((entry) => entry.userId);
+  const result = await client.query(
+    `SELECT account.id, account.first_name, account.last_name
+     FROM site_assignments AS assignment
+     JOIN users AS account
+       ON account.company_id = assignment.company_id
+      AND account.id = assignment.user_id
+     WHERE assignment.company_id = $1
+       AND assignment.construction_site_id = $2
+       AND assignment.work_date = $3
+       AND assignment.status IN ('released', 'completed')
+       AND account.status = 'active'
+       AND account.id = ANY($4::UUID[])
+     GROUP BY account.id`,
+    [context.companyId, constructionSiteId, workDate, requestedIds]
+  );
+  const employees = new Map(result.rows.map((row) => [row.id, row]));
+  if (employees.size !== requestedIds.length) {
+    throw new InputError(
+      "Mindestens ein Mitarbeiter ist an diesem Tag nicht für die Baustelle eingeplant.",
+      409,
+      "report_personnel_conflict"
+    );
+  }
+  return personnel.map((entry) => {
+    const employee = employees.get(entry.userId);
+    return {
+      userId: entry.userId,
+      name: `${employee.first_name} ${employee.last_name}`,
+      minutes: entry.minutes
+    };
+  });
+}
+
+function structuredReportData(input, personnel) {
+  return {
+    workPerformed: input.workPerformed,
+    obstructions: input.obstructions,
+    openItems: input.openItems,
+    personnel
+  };
+}
+
 async function createSiteReport(client, context, input) {
   await requirePlanner(client, context);
   await requireActiveSite(client, context, input.constructionSiteId);
@@ -1399,14 +1462,24 @@ async function createSiteReport(client, context, input) {
       throw new InputError("Das Originalfoto gehört nicht zu dieser Baustelle.", 409, "report_document_conflict");
     }
   }
+  const personnel = await resolveReportPersonnel(
+    client,
+    context,
+    input.constructionSiteId,
+    input.workDate,
+    input.personnel
+  );
   const result = await client.query(
     `INSERT INTO site_reports (
        company_id, construction_site_id, report_number, report_type, work_date,
-       source_mode, summary, details, source_document_id, status, author_user_id
-     ) VALUES ($1, $2, NULL, $3, $4, $5, $6, $7, $8, 'submitted', $9)
+       source_mode, summary, details, structured_data, source_document_id,
+       status, author_user_id
+     ) VALUES ($1, $2, NULL, $3, $4, $5, $6, $7, $8::JSONB, $9, 'submitted', $10)
      RETURNING id`,
     [context.companyId, input.constructionSiteId, input.reportType, input.workDate,
-      input.sourceMode, input.summary, input.details, input.sourceDocumentId, context.userId]
+      input.sourceMode, input.summary, input.details,
+      JSON.stringify(structuredReportData(input, personnel)),
+      input.sourceDocumentId, context.userId]
   );
   return getSiteReportRecord(client, context, result.rows[0].id);
 }
@@ -1414,7 +1487,7 @@ async function createSiteReport(client, context, input) {
 async function createMobileSiteReport(client, context, input) {
   const duplicate = await client.query(
     `SELECT id, author_user_id, construction_site_id, work_date, report_type,
-            source_mode, summary, details
+            source_mode, summary, details, structured_data
      FROM site_reports
      WHERE company_id = $1 AND client_report_id = $2`,
     [context.companyId, input.clientReportId]
@@ -1427,7 +1500,14 @@ async function createMobileSiteReport(client, context, input) {
       && row.report_type === input.reportType
       && row.source_mode === input.sourceMode
       && row.summary === input.summary
-      && (row.details || null) === input.details;
+      && (row.details || null) === input.details
+      && (row.structured_data?.workPerformed || row.details || row.summary) === input.workPerformed
+      && (row.structured_data?.obstructions || null) === input.obstructions
+      && (row.structured_data?.openItems || null) === input.openItems
+      && JSON.stringify((row.structured_data?.personnel || []).map((entry) => ({
+        userId: entry.userId,
+        minutes: entry.minutes
+      }))) === JSON.stringify(input.personnel);
     if (!same) {
       throw new InputError(
         "Die Offline-Berichts-ID wurde bereits für einen anderen Bericht verwendet.",
@@ -1438,14 +1518,6 @@ async function createMobileSiteReport(client, context, input) {
     return { siteReport: await getSiteReportRecord(client, context, row.id), idempotent: true };
   }
 
-  const roles = await activeRoleKeys(client, context);
-  if (!roles.has("foreman")) {
-    throw new InputError(
-      "Nur der für diesen Einsatz bestimmte Vorarbeiter darf den Baustellenbericht erfassen.",
-      403,
-      "report_forbidden"
-    );
-  }
   const assignment = await client.query(
     `SELECT id
      FROM site_assignments
@@ -1457,11 +1529,25 @@ async function createMobileSiteReport(client, context, input) {
   );
   if (assignment.rowCount !== 1) {
     throw new InputError(
-      "Du bist für diesen Baustellentag nicht als berichtspflichtiger Vorarbeiter eingeteilt.",
+      "Du bist für diesen Baustellentag nicht als verantwortlicher Vorarbeiter eingeteilt.",
       403,
-      "report_assignment_required"
+      "report_forbidden"
     );
   }
+  if (input.personnelProvided && !input.personnel.some((entry) => entry.userId === context.userId)) {
+    throw new InputError(
+      "Der verantwortliche Vorarbeiter muss mit seinen Stunden im Bericht enthalten sein.",
+      409,
+      "report_author_hours_required"
+    );
+  }
+  const personnel = await resolveReportPersonnel(
+    client,
+    context,
+    input.constructionSiteId,
+    input.workDate,
+    input.personnel
+  );
 
   const existingReport = await client.query(
     `SELECT id FROM site_reports
@@ -1481,12 +1567,14 @@ async function createMobileSiteReport(client, context, input) {
   const result = await client.query(
     `INSERT INTO site_reports (
        company_id, construction_site_id, report_number, report_type, work_date,
-       source_mode, summary, details, source_document_id, status, author_user_id,
+       source_mode, summary, details, structured_data, source_document_id,
+       status, author_user_id,
        site_assignment_id, client_report_id
-     ) VALUES ($1, $2, NULL, $3, $4, 'digital', $5, $6, NULL, 'submitted', $7, $8, $9)
+     ) VALUES ($1, $2, NULL, $3, $4, 'digital', $5, $6, $7::JSONB, NULL, 'submitted', $8, $9, $10)
      RETURNING id`,
     [context.companyId, input.constructionSiteId, input.reportType, input.workDate,
-      input.summary, input.details, context.userId, assignment.rows[0].id, input.clientReportId]
+      input.summary, input.details, JSON.stringify(structuredReportData(input, personnel)),
+      context.userId, assignment.rows[0].id, input.clientReportId]
   );
   return { siteReport: await getSiteReportRecord(client, context, result.rows[0].id), idempotent: false };
 }
@@ -1508,7 +1596,8 @@ async function finalizeSiteReport(client, context, reportId, input, staticDirect
   await requirePlanner(client, context);
   const result = await client.query(
     `SELECT report.id, report.report_number, report.report_type, report.work_date,
-            report.summary, report.details, report.status, report.row_version,
+            report.summary, report.details, report.structured_data,
+            report.status, report.row_version,
             author.first_name || ' ' || author.last_name AS author_name,
             company.legal_name, company.display_name, company.street AS company_street,
             company.house_number AS company_house_number, company.postal_code AS company_postal_code,
@@ -1568,7 +1657,8 @@ async function finalizeSiteReport(client, context, reportId, input, staticDirect
     projectName: row.project_name,
     siteNumber: row.site_number,
     siteName: row.site_name,
-    siteAddress
+    siteAddress,
+    structuredData: row.structured_data
   };
   const pdf = await buildFinalReportPdf({
     report: {
@@ -1578,6 +1668,7 @@ async function finalizeSiteReport(client, context, reportId, input, staticDirect
       workDate: databaseDate(row.work_date),
       summary: row.summary,
       details: row.details,
+      structuredData: row.structured_data,
       authorName: row.author_name
     },
     company: companySnapshot,
@@ -1703,6 +1794,7 @@ async function importAssignmentsFromWorkbook(client, context, plan, fileName, ma
 
   let importedCount = 0;
   let skippedChangedDays = 0;
+  const affectedSiteDays = new Map();
   for (const rows of groups.values()) {
     const orderedRows = rows.sort((left, right) => left.siteOrder - right.siteOrder);
     const { employee, workDate } = orderedRows[0];
@@ -1746,6 +1838,10 @@ async function importAssignmentsFromWorkbook(client, context, plan, fileName, ma
           context.userId
         ]
       );
+      affectedSiteDays.set(
+        `${row.site.id}:${workDate}`,
+        { constructionSiteId: row.site.id, workDate }
+      );
       sequenceNumber += 1;
       importedCount += 1;
     }
@@ -1755,6 +1851,14 @@ async function importAssignmentsFromWorkbook(client, context, plan, fileName, ma
       "Die Planung wurde zwischen Vorschau und Import geändert. Bitte Excel erneut prüfen.",
       409,
       "assignment_import_changed"
+    );
+  }
+  for (const affected of affectedSiteDays.values()) {
+    await reconcileAutomaticSiteForeman(
+      client,
+      context,
+      affected.constructionSiteId,
+      affected.workDate
     );
   }
   return {
@@ -1866,6 +1970,36 @@ async function importSitesFromWorkbook(client, context, plan) {
   return { createdCount, skippedCount: preview.sourceRowCount - createdCount };
 }
 
+async function getEmployeeRecord(client, context, employeeId) {
+  const result = await client.query(
+    `SELECT account.id, account.personnel_number, account.first_name, account.last_name,
+            account.must_change_password, account.row_version,
+            COALESCE(
+              jsonb_agg(role.role_key ORDER BY role.role_key)
+                FILTER (WHERE role.id IS NOT NULL),
+              '[]'::jsonb
+            ) AS roles
+     FROM users AS account
+     LEFT JOIN user_roles AS role_assignment
+       ON role_assignment.company_id = account.company_id
+      AND role_assignment.user_id = account.id
+      AND role_assignment.revoked_at IS NULL
+     LEFT JOIN roles AS role
+       ON role.company_id = role_assignment.company_id
+      AND role.id = role_assignment.role_id
+      AND role.status = 'active'
+     WHERE account.company_id = $1
+       AND account.id = $2
+       AND account.status = 'active'
+     GROUP BY account.id`,
+    [context.companyId, employeeId]
+  );
+  if (result.rowCount !== 1) {
+    throw new InputError("Der Mitarbeiter wurde nicht gefunden.", 404, "employee_not_found");
+  }
+  return employeeDto(result.rows[0]);
+}
+
 async function createEmployee(client, context, input) {
   const roles = await requirePlanner(client, context);
   if (
@@ -1904,7 +2038,145 @@ async function createEmployee(client, context, input) {
      VALUES ($1, $2, $3, $4, 'Anlage in der Verwaltung')`,
     [context.companyId, inserted.rows[0].id, roleResult.rows[0].id, context.userId]
   );
-  return employeeDto({ ...inserted.rows[0], roles: [input.role] });
+  return getEmployeeRecord(client, context, inserted.rows[0].id);
+}
+
+async function updateEmployee(client, context, employeeId, input) {
+  const actorRoles = await requirePlanner(client, context);
+  if (
+    MANAGEMENT_ROLES.has(input.role)
+    && ![...actorRoles].some((role) => MANAGEMENT_ASSIGNER_ROLES.has(role))
+  ) {
+    throw new InputError(
+      "Nur Geschäftsführung oder Administrator dürfen Verwaltungsrollen vergeben.",
+      403,
+      "forbidden"
+    );
+  }
+
+  const current = await client.query(
+    `SELECT id, personnel_number, row_version
+     FROM users
+     WHERE company_id = $1 AND id = $2 AND status = 'active'
+     FOR UPDATE`,
+    [context.companyId, employeeId]
+  );
+  if (current.rowCount !== 1) {
+    throw new InputError("Der Mitarbeiter wurde nicht gefunden.", 404, "employee_not_found");
+  }
+  if (Number(current.rows[0].row_version) !== input.rowVersion) {
+    throw new InputError(
+      "Der Mitarbeiter wurde zwischenzeitlich geändert. Bitte die Verwaltung aktualisieren.",
+      409,
+      "row_version_conflict"
+    );
+  }
+
+  const currentRoles = await activeRoleKeys(client, {
+    ...context,
+    userId: employeeId
+  });
+  if (currentRoles.has("admin")) {
+    throw new InputError(
+      "Das Administratorkonto wird aus Sicherheitsgründen nicht über die Mitarbeiterliste geändert.",
+      409,
+      "admin_account_locked"
+    );
+  }
+  if (
+    [...currentRoles].some((role) => MANAGEMENT_ROLES.has(role))
+    && ![...actorRoles].some((role) => MANAGEMENT_ASSIGNER_ROLES.has(role))
+  ) {
+    throw new InputError(
+      "Nur Geschäftsführung oder Administrator dürfen Verwaltungsrollen ändern.",
+      403,
+      "forbidden"
+    );
+  }
+
+  const duplicate = await client.query(
+    `SELECT 1
+     FROM users
+     WHERE company_id = $1 AND personnel_number = $2 AND id <> $3`,
+    [context.companyId, input.personnelNumber, employeeId]
+  );
+  if (duplicate.rowCount) {
+    throw new InputError("Diese Personalnummer ist bereits vergeben.", 409, "personnel_number_exists");
+  }
+
+  if (currentRoles.has("foreman") && input.role !== "foreman") {
+    const responsibility = await client.query(
+      `SELECT 1
+       FROM site_assignments
+       WHERE company_id = $1
+         AND user_id = $2
+         AND status IN ('draft', 'released')
+         AND report_responsible
+         AND report_responsibility_source = 'manual'
+       LIMIT 1`,
+      [context.companyId, employeeId]
+    );
+    if (responsibility.rowCount) {
+      throw new InputError(
+        "Der Mitarbeiter ist noch als Vorarbeiter eingeplant. Bitte zuerst diese Einsätze ändern.",
+        409,
+        "employee_has_foreman_assignments"
+      );
+    }
+  }
+
+  const roleResult = await client.query(
+    "SELECT id FROM roles WHERE company_id = $1 AND role_key = $2 AND status = 'active'",
+    [context.companyId, input.role]
+  );
+  if (roleResult.rowCount !== 1) throw new InputError("Die gewählte Rolle ist nicht verfügbar.");
+
+  const updated = await client.query(
+    `UPDATE users
+     SET personnel_number = $3, first_name = $4, last_name = $5
+     WHERE company_id = $1 AND id = $2 AND row_version = $6
+     RETURNING id`,
+    [
+      context.companyId,
+      employeeId,
+      input.personnelNumber,
+      input.firstName,
+      input.lastName,
+      input.rowVersion
+    ]
+  );
+  if (updated.rowCount !== 1) {
+    throw new InputError(
+      "Der Mitarbeiter wurde zwischenzeitlich geändert. Bitte die Verwaltung aktualisieren.",
+      409,
+      "row_version_conflict"
+    );
+  }
+
+  await client.query(
+    `UPDATE user_roles
+     SET revoked_at = CURRENT_TIMESTAMP,
+         revoked_by_user_id = $3,
+         reason = 'Rollenänderung in der Mitarbeiterverwaltung'
+     WHERE company_id = $1
+       AND user_id = $2
+       AND revoked_at IS NULL
+       AND role_id <> $4`,
+    [context.companyId, employeeId, context.userId, roleResult.rows[0].id]
+  );
+  await client.query(
+    `INSERT INTO user_roles (
+       company_id, user_id, role_id, assigned_by_user_id, reason
+     )
+     SELECT $1, $2, $3, $4, 'Rollenänderung in der Mitarbeiterverwaltung'
+     WHERE NOT EXISTS (
+       SELECT 1 FROM user_roles
+       WHERE company_id = $1 AND user_id = $2 AND role_id = $3 AND revoked_at IS NULL
+     )`,
+    [context.companyId, employeeId, roleResult.rows[0].id, context.userId]
+  );
+
+  return getEmployeeRecord(client, context, employeeId);
 }
 
 async function createCustomer(client, context, input) {
@@ -2477,6 +2749,75 @@ async function createSiteBundle(client, context, input) {
   });
 }
 
+async function reconcileAutomaticSiteForeman(client, context, constructionSiteId, workDate) {
+  await client.query(
+    "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
+    [`assignment-report:${context.companyId}:${constructionSiteId}:${workDate}`]
+  );
+  const result = await client.query(
+    `SELECT assignment.id, assignment.report_responsible,
+            assignment.report_responsibility_source,
+            EXISTS (
+              SELECT 1
+              FROM site_reports AS report
+              WHERE report.company_id = assignment.company_id
+                AND report.site_assignment_id = assignment.id
+            ) AS has_mobile_report
+     FROM site_assignments AS assignment
+     WHERE assignment.company_id = $1
+       AND assignment.construction_site_id = $2
+       AND assignment.work_date = $3
+       AND assignment.status <> 'cancelled'
+     ORDER BY assignment.created_at, assignment.id
+     FOR UPDATE`,
+    [context.companyId, constructionSiteId, workDate]
+  );
+  const assignmentsForSite = result.rows;
+  const manualResponsible = assignmentsForSite.some((assignment) => (
+    assignment.report_responsible
+    && assignment.report_responsibility_source === "manual"
+  ));
+
+  if (assignmentsForSite.length === 1 && !manualResponsible) {
+    const [assignment] = assignmentsForSite;
+    if (!assignment.report_responsible && !assignment.has_mobile_report) {
+      await client.query(
+        `UPDATE site_assignments
+         SET report_responsible = TRUE,
+             report_responsibility_source = 'automatic',
+             changed_by_user_id = $3,
+             last_change_reason = 'Automatisch: alleiniger Mitarbeiter auf der Baustelle'
+         WHERE company_id = $1 AND id = $2`,
+        [context.companyId, assignment.id, context.userId]
+      );
+    }
+    return;
+  }
+
+  if (assignmentsForSite.length !== 1) {
+    await client.query(
+      `UPDATE site_assignments AS assignment
+       SET report_responsible = FALSE,
+           report_responsibility_source = NULL,
+           changed_by_user_id = $4,
+           last_change_reason = 'Automatische Vorarbeiterfunktion beendet: Teambelegung geändert'
+       WHERE assignment.company_id = $1
+         AND assignment.construction_site_id = $2
+         AND assignment.work_date = $3
+         AND assignment.status <> 'cancelled'
+         AND assignment.report_responsible
+         AND assignment.report_responsibility_source = 'automatic'
+         AND NOT EXISTS (
+           SELECT 1
+           FROM site_reports AS report
+           WHERE report.company_id = assignment.company_id
+             AND report.site_assignment_id = assignment.id
+         )`,
+      [context.companyId, constructionSiteId, workDate, context.userId]
+    );
+  }
+}
+
 async function createAssignment(client, context, input) {
   await requirePlanner(client, context);
   const [employee, site] = await Promise.all([
@@ -2501,6 +2842,26 @@ async function createAssignment(client, context, input) {
     await client.query(
       "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
       [`assignment-report:${context.companyId}:${input.constructionSiteId}:${input.workDate}`]
+    );
+    await client.query(
+      `UPDATE site_assignments AS assignment
+       SET report_responsible = FALSE,
+           report_responsibility_source = NULL,
+           changed_by_user_id = $4,
+           last_change_reason = 'Manuell eingeteilter Vorarbeiter übernimmt'
+       WHERE assignment.company_id = $1
+         AND assignment.construction_site_id = $2
+         AND assignment.work_date = $3
+         AND assignment.status <> 'cancelled'
+         AND assignment.report_responsible
+         AND assignment.report_responsibility_source = 'automatic'
+         AND NOT EXISTS (
+           SELECT 1
+           FROM site_reports AS report
+           WHERE report.company_id = assignment.company_id
+             AND report.site_assignment_id = assignment.id
+         )`,
+      [context.companyId, input.constructionSiteId, input.workDate, context.userId]
     );
     const existingResponsible = await client.query(
       `SELECT 1 FROM site_assignments
@@ -2532,9 +2893,10 @@ async function createAssignment(client, context, input) {
     `INSERT INTO site_assignments (
        company_id, user_id, construction_site_id, work_date, sequence_number,
        planned_start_time, status, comment, report_responsible,
+       report_responsibility_source,
        created_by_user_id, changed_by_user_id
-     ) VALUES ($1, $2, $3, $4, $5, $6, 'released', $7, $8, $9, $9)
-     RETURNING id, sequence_number, planned_start_time::TEXT, report_responsible`,
+     ) VALUES ($1, $2, $3, $4, $5, $6, 'released', $7, $8, $9, $10, $10)
+     RETURNING id`,
     [
       context.companyId,
       input.employeeId,
@@ -2544,17 +2906,32 @@ async function createAssignment(client, context, input) {
       input.plannedStartTime,
       input.comment,
       input.reportResponsible,
+      input.reportResponsible ? "manual" : null,
       context.userId
     ]
   );
+  await reconcileAutomaticSiteForeman(
+    client,
+    context,
+    input.constructionSiteId,
+    input.workDate
+  );
+  const assignment = await client.query(
+    `SELECT id, sequence_number, planned_start_time::TEXT, report_responsible,
+            report_responsibility_source
+     FROM site_assignments
+     WHERE company_id = $1 AND id = $2`,
+    [context.companyId, inserted.rows[0].id]
+  );
   return {
-    id: inserted.rows[0].id,
+    id: assignment.rows[0].id,
     employeeId: input.employeeId,
     constructionSiteId: input.constructionSiteId,
     workDate: input.workDate,
-    sequenceNumber: inserted.rows[0].sequence_number,
-    plannedStartTime: inserted.rows[0].planned_start_time,
-    reportResponsible: inserted.rows[0].report_responsible
+    sequenceNumber: assignment.rows[0].sequence_number,
+    plannedStartTime: assignment.rows[0].planned_start_time,
+    reportResponsible: assignment.rows[0].report_responsible,
+    reportResponsibilitySource: assignment.rows[0].report_responsibility_source
   };
 }
 
@@ -2563,7 +2940,7 @@ async function updateAssignment(client, context, assignmentId, input) {
   const current = await client.query(
     `SELECT assignment.id, assignment.user_id, assignment.construction_site_id,
             assignment.work_date, assignment.sequence_number, assignment.status,
-            assignment.report_responsible,
+            assignment.report_responsible, assignment.report_responsibility_source,
             EXISTS (
               SELECT 1 FROM site_reports AS report
               WHERE report.company_id = assignment.company_id
@@ -2582,9 +2959,20 @@ async function updateAssignment(client, context, assignmentId, input) {
     throw new InputError("Dieser Einsatz kann nicht mehr geändert werden.", 409, "assignment_locked");
   }
 
-  const reportResponsible = input.reportResponsible === null
+  let reportResponsible = input.reportResponsible === null
     ? assignment.report_responsible
     : input.reportResponsible;
+  let reportResponsibilitySource = input.reportResponsible === null
+    ? assignment.report_responsibility_source
+    : (input.reportResponsible ? "manual" : null);
+  if (
+    databaseDate(assignment.work_date) !== input.workDate
+    && assignment.report_responsibility_source === "automatic"
+    && input.reportResponsible === null
+  ) {
+    reportResponsible = false;
+    reportResponsibilitySource = null;
+  }
   if (assignment.has_mobile_report && (
     databaseDate(assignment.work_date) !== input.workDate
     || reportResponsible !== assignment.report_responsible
@@ -2595,7 +2983,7 @@ async function updateAssignment(client, context, assignmentId, input) {
       "assignment_has_report"
     );
   }
-  if (reportResponsible) {
+  if (reportResponsible && reportResponsibilitySource === "manual") {
     const employee = await client.query(
       "SELECT is_foreman FROM users WHERE company_id = $1 AND id = $2 AND status = 'active'",
       [context.companyId, assignment.user_id]
@@ -2606,6 +2994,33 @@ async function updateAssignment(client, context, assignmentId, input) {
     await client.query(
       "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
       [`assignment-report:${context.companyId}:${assignment.construction_site_id}:${input.workDate}`]
+    );
+    await client.query(
+      `UPDATE site_assignments AS candidate
+       SET report_responsible = FALSE,
+           report_responsibility_source = NULL,
+           changed_by_user_id = $5,
+           last_change_reason = 'Manuell eingeteilter Vorarbeiter übernimmt'
+       WHERE candidate.company_id = $1
+         AND candidate.construction_site_id = $2
+         AND candidate.work_date = $3
+         AND candidate.id <> $4
+         AND candidate.status <> 'cancelled'
+         AND candidate.report_responsible
+         AND candidate.report_responsibility_source = 'automatic'
+         AND NOT EXISTS (
+           SELECT 1
+           FROM site_reports AS report
+           WHERE report.company_id = candidate.company_id
+             AND report.site_assignment_id = candidate.id
+         )`,
+      [
+        context.companyId,
+        assignment.construction_site_id,
+        input.workDate,
+        assignmentId,
+        context.userId
+      ]
     );
     const existingResponsible = await client.query(
       `SELECT 1 FROM site_assignments
@@ -2645,11 +3060,11 @@ async function updateAssignment(client, context, assignmentId, input) {
          sequence_number = $4,
          planned_start_time = $5,
          report_responsible = $6,
-         changed_by_user_id = $7,
-         last_change_reason = $8
+         report_responsibility_source = $7,
+         changed_by_user_id = $8,
+         last_change_reason = $9
      WHERE company_id = $1 AND id = $2
-     RETURNING id, user_id, construction_site_id, work_date,
-               sequence_number, planned_start_time::TEXT, status, report_responsible`,
+     RETURNING id`,
     [
       context.companyId,
       assignmentId,
@@ -2657,11 +3072,35 @@ async function updateAssignment(client, context, assignmentId, input) {
       sequenceNumber,
       input.plannedStartTime,
       reportResponsible,
+      reportResponsibilitySource,
       context.userId,
       input.changeReason
     ]
   );
-  const row = updated.rows[0];
+  const previousDate = databaseDate(assignment.work_date);
+  await reconcileAutomaticSiteForeman(
+    client,
+    context,
+    assignment.construction_site_id,
+    previousDate
+  );
+  if (previousDate !== input.workDate) {
+    await reconcileAutomaticSiteForeman(
+      client,
+      context,
+      assignment.construction_site_id,
+      input.workDate
+    );
+  }
+  const refreshed = await client.query(
+    `SELECT id, user_id, construction_site_id, work_date, sequence_number,
+            planned_start_time::TEXT, status, report_responsible,
+            report_responsibility_source
+     FROM site_assignments
+     WHERE company_id = $1 AND id = $2`,
+    [context.companyId, updated.rows[0].id]
+  );
+  const row = refreshed.rows[0];
   return {
     id: row.id,
     employeeId: row.user_id,
@@ -2670,7 +3109,8 @@ async function updateAssignment(client, context, assignmentId, input) {
     sequenceNumber: row.sequence_number,
     plannedStartTime: row.planned_start_time,
     status: row.status,
-    reportResponsible: row.report_responsible
+    reportResponsible: row.report_responsible,
+    reportResponsibilitySource: row.report_responsibility_source
   };
 }
 
@@ -2687,12 +3127,18 @@ async function cancelAssignment(client, context, assignmentId, changeReason) {
          WHERE report.company_id = site_assignments.company_id
            AND report.site_assignment_id = site_assignments.id
        )
-     RETURNING id`,
+     RETURNING id, construction_site_id, work_date`,
     [context.companyId, assignmentId, context.userId, changeReason]
   );
   if (updated.rowCount !== 1) {
     throw new InputError("Der Einsatz wurde nicht gefunden oder ist bereits abgeschlossen.", 409, "assignment_locked");
   }
+  await reconcileAutomaticSiteForeman(
+    client,
+    context,
+    updated.rows[0].construction_site_id,
+    databaseDate(updated.rows[0].work_date)
+  );
   return { id: assignmentId, status: "cancelled" };
 }
 
@@ -3156,6 +3602,18 @@ export function createApp({ pool, config, limiter = new LoginRateLimiter(), logg
           (client, context) => createEmployee(client, context, input)
         );
         return json(response, 201, { employee });
+      }
+
+      const adminEmployeeMatch = /^\/api\/v1\/admin\/employees\/([^/]+)$/.exec(url.pathname);
+      if (request.method === "PATCH" && adminEmployeeMatch) {
+        const employeeId = validateId(adminEmployeeMatch[1], "Mitarbeiter-ID");
+        const input = validateEmployeeUpdate(await readJson(request));
+        const employee = await withReadySession(
+          pool,
+          tokenHash,
+          (client, context) => updateEmployee(client, context, employeeId, input)
+        );
+        return json(response, 200, { employee });
       }
 
       if (request.method === "POST" && url.pathname === "/api/v1/admin/customers") {

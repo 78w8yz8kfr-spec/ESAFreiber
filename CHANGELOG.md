@@ -4,6 +4,16 @@ Alle wesentlichen Änderungen an Schäfchen werden in dieser Datei dokumentiert.
 
 ## [Unreleased]
 
+### V0.23.0 – Mitarbeiter, Vorarbeiter und strukturierte Berichte
+
+- Mitarbeiterstammdaten und Betriebsrollen lassen sich geschützt bearbeiten; parallele Änderungen werden über den Versionsstand erkannt
+- manuell eingeplante Vorarbeiter werden technisch von der automatischen Verantwortung eines allein eingesetzten Monteurs unterschieden
+- der einzige Mitarbeiter einer Baustelle übernimmt automatisch die Vorarbeiter- und Berichtsfunktion, ohne dauerhaft die Mitarbeiterrolle Vorarbeiter zu erhalten
+- sobald das Team vergrößert wird, endet die automatische Vorarbeiterfunktion; ein manuell bestimmter Vorarbeiter bleibt verbindlich
+- Montage- und Bautagesberichte erfassen ausgeführte Leistungen, Behinderungen, offene Punkte und die Stunden aller eingeplanten Mitarbeiter
+- Mitarbeiter und Namen werden serverseitig gegen die Tagesplanung geprüft; Abschluss-PDFs übernehmen die strukturierte Gliederung
+- neue Migrationen 025 und 026 sowie erweiterte SQL-, API-, PostgreSQL-, PDF- und PWA-Tests
+
 ### V0.22.0 – Mobile Baustellenakte
 
 - der bisherige Details-Hinweis des Tageseinsatzes öffnet jetzt die echte Baustellenakte

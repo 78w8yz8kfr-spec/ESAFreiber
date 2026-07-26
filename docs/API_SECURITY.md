@@ -1,7 +1,7 @@
 # API-Sicherheitsgrenze
 
 Stand: 26.07.2026
-Technischer Stand: V0.22.0
+Technischer Stand: V0.23.0
 
 Die API ist die einzige erlaubte Verbindung zwischen PWA und PostgreSQL. Die
 öffentliche GitHub-Pages-Adresse bleibt eine lokale Demo. Im Online-Betrieb
@@ -82,6 +82,7 @@ API setzt beide Werte ausschließlich selbst.
 | `GET` | `/api/v1/admin/documents/:id/content` | Dokument nach Sitzungs- und Rollenprüfung herunterladen |
 | `PATCH` | `/api/v1/admin/documents/:id` | Dokument versionsgeschützt archivieren oder reaktivieren |
 | `POST` | `/api/v1/admin/employees` | Mitarbeiter mit Startpasswort und begrenzter Rolle anlegen |
+| `PATCH` | `/api/v1/admin/employees/:id` | Mitarbeiterstammdaten und Rolle mit Versionskonfliktschutz bearbeiten |
 | `POST` | `/api/v1/admin/customers` | Firmen- oder Privatkunden getrennt anlegen |
 | `PATCH` | `/api/v1/admin/customers/:id` | Kundenstammdaten und Archivstatus versionsgeschützt ändern |
 | `POST` | `/api/v1/admin/projects` | Projekt einem aktiven Kunden zuordnen |

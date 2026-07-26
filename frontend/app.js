@@ -75,8 +75,11 @@
     mobileReportForm: document.querySelector("#mobile-report-form"),
     mobileReportSite: document.querySelector("#mobile-report-site"),
     mobileReportType: document.querySelector("#mobile-report-type"),
+    mobileReportPersonnelList: document.querySelector("#mobile-report-personnel-list"),
     mobileReportSummary: document.querySelector("#mobile-report-summary"),
     mobileReportDetails: document.querySelector("#mobile-report-details"),
+    mobileReportObstructions: document.querySelector("#mobile-report-obstructions"),
+    mobileReportOpenItems: document.querySelector("#mobile-report-open-items"),
     mobileReportSubmit: document.querySelector("#mobile-report-submit"),
     mobileReportMessage: document.querySelector("#mobile-report-message"),
     employeeSiteWorkspace: document.querySelector("#employee-site-workspace"),
@@ -280,6 +283,15 @@
     employeeMessage: document.querySelector("#employee-message"),
     employeeList: document.querySelector("#employee-list"),
     employeePanel: document.querySelector("#employee-panel"),
+    employeeEditForm: document.querySelector("#employee-edit-form"),
+    employeeEditTitle: document.querySelector("#employee-edit-title"),
+    employeeEditFirstName: document.querySelector("#employee-edit-first-name"),
+    employeeEditLastName: document.querySelector("#employee-edit-last-name"),
+    employeeEditPersonnelNumber: document.querySelector("#employee-edit-personnel-number"),
+    employeeEditRole: document.querySelector("#employee-edit-role"),
+    employeeEditSave: document.querySelector("#employee-edit-save"),
+    employeeEditCancel: document.querySelector("#employee-edit-cancel"),
+    employeeEditMessage: document.querySelector("#employee-edit-message"),
     customerPanel: document.querySelector("#customer-panel"),
     customerForm: document.querySelector("#customer-form"),
     customerType: document.querySelector("#customer-type"),
@@ -428,6 +440,7 @@
   let deliveryNoteFile = null;
   let reportPhotoFile = null;
   let finalizingReportId = null;
+  let editingEmployeeId = null;
   let speechRecognition = null;
   let cachedUserId = null;
   let employeeSiteState = null;
@@ -612,7 +625,7 @@
     elements.passwordState.textContent = demoMode ? "In der Demo inaktiv" : "Sicher verschlüsselt";
     elements.loginSubmit.classList.toggle("button--secondary", demoMode);
     elements.loginSubmit.classList.toggle("button--primary", !demoMode);
-    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.22.0 ${demoMode ? "Demo" : "Online"}`;
+    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.23.0 ${demoMode ? "Demo" : "Online"}`;
 
     if (demoMode) {
       elements.modeNoteText.replaceChildren();
@@ -1947,7 +1960,9 @@
     elements.assignmentEditDate.value = assignment.workDate;
     elements.assignmentEditTime.value = assignment.plannedStartTime?.slice(0, 5) || "";
     const employee = adminState?.employees.find((item) => item.id === assignment.employeeId);
-    elements.assignmentEditReportResponsible.disabled = !employee?.roles?.includes("foreman");
+    elements.assignmentEditReportResponsible.disabled =
+      assignment.reportResponsibilitySource === "automatic"
+      || !employee?.roles?.includes("foreman");
     elements.assignmentEditReportResponsible.checked = Boolean(assignment.reportResponsible);
     elements.assignmentEditReason.value = "";
     elements.assignmentEditMessage.textContent = "";
@@ -2003,7 +2018,9 @@
           title.textContent = assignment.employeeName;
           meta.textContent = `${startTime} · ${assignment.siteName}`;
           duty.className = "foreman-duty";
-          duty.textContent = "Vorarbeiter · Bericht";
+          duty.textContent = assignment.reportResponsibilitySource === "automatic"
+            ? "Automatisch Vorarbeiter · allein vor Ort"
+            : "Vorarbeiter · Bericht";
           duty.hidden = !assignment.reportResponsible;
           edit.type = "button";
           edit.textContent = "Ändern";
@@ -2016,6 +2033,27 @@
       day.append(dateBlock, items);
       elements.adminWeekBoard.append(day);
     }
+  }
+
+  function closeEmployeeEditor() {
+    editingEmployeeId = null;
+    elements.employeeEditForm.hidden = true;
+    elements.employeeEditForm.reset();
+    elements.employeeEditMessage.textContent = "";
+  }
+
+  function openEmployeeEditor(employee) {
+    editingEmployeeId = employee.id;
+    elements.employeeEditTitle.textContent = `${employee.firstName} ${employee.lastName}`;
+    elements.employeeEditFirstName.value = employee.firstName;
+    elements.employeeEditLastName.value = employee.lastName;
+    elements.employeeEditPersonnelNumber.value = employee.personnelNumber;
+    elements.employeeEditRole.value = employee.roles.find((role) => (
+      ["installer", "foreman", "managing_director", "dispatch_office", "project_manager"].includes(role)
+    )) || "installer";
+    elements.employeeEditMessage.textContent = "";
+    elements.employeeEditForm.hidden = false;
+    elements.employeeEditForm.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
   function renderAdmin() {
@@ -2039,6 +2077,12 @@
       && elements.employeeManagementRoles.some((option) => option.value === elements.employeeRole.value)
     ) {
       elements.employeeRole.value = "installer";
+    }
+    if (
+      !adminState.canCreateManagementRoles
+      && elements.employeeManagementRoles.some((option) => option.value === elements.employeeEditRole.value)
+    ) {
+      elements.employeeEditRole.value = "installer";
     }
 
     renderAdminSelect(
@@ -2101,7 +2145,10 @@
       appendAdminListItem(
         elements.employeeList,
         `${employee.firstName} ${employee.lastName}`,
-        `${employee.personnelNumber} · ${employee.roles.map((role) => roleLabels[role] || role).join(", ")}`
+        `${employee.personnelNumber} · ${employee.roles.map((role) => roleLabels[role] || role).join(", ")}`,
+        employee.roles.includes("admin")
+          ? null
+          : { label: "Bearbeiten", handler: () => openEmployeeEditor(employee) }
       );
     });
 
@@ -2128,7 +2175,13 @@
         appendAdminListItem(
           elements.adminAssignmentList,
           `${assignment.sequenceNumber}. ${assignment.employeeName}`,
-          `${start} · ${assignment.siteName}${assignment.reportResponsible ? " · Vorarbeiter / Bericht" : ""}`
+          `${start} · ${assignment.siteName}${
+            assignment.reportResponsible
+              ? (assignment.reportResponsibilitySource === "automatic"
+                ? " · automatisch Vorarbeiter"
+                : " · Vorarbeiter / Bericht")
+              : ""
+          }`
         );
       });
     }
@@ -2468,13 +2521,93 @@
     elements.mobileReportMessage.textContent = "";
   }
 
-  function openMobileReportForm(assignment) {
+  function currentSiteMinutes(assignment) {
+    const arrival = [...state.events].reverse().find((entry) => (
+      entry.type === "site_arrival"
+      && entry.constructionSiteId === assignment.constructionSite.id
+    ));
+    if (!arrival) return null;
+    const minutes = Math.max(15, Math.round((Date.now() - new Date(arrival.recordedAt).valueOf()) / 900000) * 15);
+    return Math.min(minutes, 1440);
+  }
+
+  function renderMobileReportPersonnel(assignment, team) {
+    elements.mobileReportPersonnelList.replaceChildren();
+    const members = team.length > 0
+      ? team
+      : [{
+        id: session.user.id,
+        name: `${session.user.firstName} ${session.user.lastName}`,
+        plannedDurationMinutes: null,
+        reportResponsible: true
+      }];
+    members.forEach((member) => {
+      const row = document.createElement("label");
+      const name = document.createElement("span");
+      const inputWrap = document.createElement("span");
+      const input = document.createElement("input");
+      const unit = document.createElement("small");
+      const isCurrentUser = member.id === session.user.id;
+      const minutes = isCurrentUser
+        ? currentSiteMinutes(assignment)
+        : member.plannedDurationMinutes;
+      row.className = "mobile-report-personnel__row";
+      name.textContent = member.name;
+      input.type = "number";
+      input.min = "0";
+      input.max = "24";
+      input.step = "0.25";
+      input.inputMode = "decimal";
+      input.dataset.userId = member.id;
+      input.setAttribute("aria-label", `Stunden für ${member.name}`);
+      input.value = minutes ? String(Math.round(minutes / 15) / 4) : "";
+      unit.textContent = "Std.";
+      inputWrap.append(input, unit);
+      row.append(name, inputWrap);
+      elements.mobileReportPersonnelList.append(row);
+    });
+  }
+
+  function collectMobileReportPersonnel() {
+    return [...elements.mobileReportPersonnelList.querySelectorAll("input[data-user-id]")]
+      .map((input) => ({
+        userId: input.dataset.userId,
+        minutes: Math.round(Number(input.value) * 60)
+      }))
+      .filter((entry) => Number.isSafeInteger(entry.minutes) && entry.minutes > 0);
+  }
+
+  async function openMobileReportForm(assignment) {
     elements.mobileReportSite.textContent = assignment.constructionSite.name;
     elements.mobileReportSummary.value = "";
     elements.mobileReportDetails.value = "";
+    elements.mobileReportObstructions.value = "";
+    elements.mobileReportOpenItems.value = "";
+    elements.mobileReportPersonnelList.replaceChildren();
     elements.mobileReportMessage.textContent = "";
     elements.mobileReportCard.hidden = false;
     elements.mobileReportCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    let team = employeeSiteState?.site?.id === assignment.constructionSite.id
+      && employeeSiteState.date === state.workDate
+      ? employeeSiteState.team
+      : [];
+    if (navigator.onLine && team.length === 0) {
+      elements.mobileReportMessage.textContent = "Heutiges Baustellenteam wird geladen …";
+      try {
+        const body = await requestJson(
+          `./api/v1/construction-sites/${encodeURIComponent(assignment.constructionSite.id)}/dashboard?date=${encodeURIComponent(state.workDate)}`
+        );
+        employeeSiteState = body.dashboard;
+        state.siteWorkspace = body.dashboard;
+        saveState();
+        team = body.dashboard.team;
+        elements.mobileReportMessage.textContent = "";
+      } catch (error) {
+        if (!error.network) elements.mobileReportMessage.textContent =
+          "Team konnte nicht geladen werden. Die eigenen Stunden können trotzdem erfasst werden.";
+      }
+    }
+    renderMobileReportPersonnel(assignment, team);
     window.setTimeout(() => elements.mobileReportSummary.focus(), 250);
   }
 
@@ -2532,7 +2665,11 @@
             workDate: report.workDate,
             sourceMode: "digital",
             summary: report.summary,
-            details: report.details
+            details: report.details,
+            workPerformed: report.workPerformed || report.details || report.summary,
+            obstructions: report.obstructions || null,
+            openItems: report.openItems || null,
+            personnel: report.personnel
           })
         });
         report.id = body.siteReport.id;
@@ -2730,7 +2867,11 @@
     elements.statusSince.textContent = !latest
       ? "Bereit zum Start"
       : `${latest.type === "clock_out" ? "Beendet um" : "Seit"} ${timeFormatter.format(new Date(latest.recordedAt))} Uhr`;
-    elements.foremanBadge.hidden = !session?.user.roles?.includes("foreman");
+    const currentAssignment = assignments[currentSiteIndex()];
+    elements.foremanBadge.hidden = !(
+      session?.user.roles?.includes("foreman")
+      || currentAssignment?.reportResponsible
+    );
   }
 
   function entryLabel(entry) {
@@ -3070,6 +3211,39 @@
     elements.employeeForm.reset();
     await refreshAdmin();
   });
+
+  elements.employeeEditForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const employee = adminState?.employees.find((item) => item.id === editingEmployeeId);
+    if (!employee) {
+      elements.employeeEditMessage.textContent = "Der Mitarbeiter wurde nicht gefunden. Bitte neu laden.";
+      return;
+    }
+    elements.employeeEditSave.disabled = true;
+    elements.employeeEditCancel.disabled = true;
+    elements.employeeEditMessage.textContent = "Änderungen werden sicher gespeichert …";
+    try {
+      await requestJson(`./api/v1/admin/employees/${encodeURIComponent(employee.id)}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          firstName: elements.employeeEditFirstName.value,
+          lastName: elements.employeeEditLastName.value,
+          personnelNumber: elements.employeeEditPersonnelNumber.value,
+          role: elements.employeeEditRole.value,
+          rowVersion: employee.rowVersion
+        })
+      });
+      closeEmployeeEditor();
+      showToast("Mitarbeiter und Rolle wurden aktualisiert.");
+      await Promise.all([refreshAdmin(), refreshLiveData()]);
+    } catch (error) {
+      elements.employeeEditMessage.textContent = error.message;
+    } finally {
+      elements.employeeEditSave.disabled = false;
+      elements.employeeEditCancel.disabled = false;
+    }
+  });
+  elements.employeeEditCancel.addEventListener("click", closeEmployeeEditor);
 
   function updateCustomerTypeFields() {
     const privateCustomer = elements.customerType.value === "private";
@@ -3688,6 +3862,18 @@
       elements.mobileReportSummary.focus();
       return;
     }
+    const workPerformed = elements.mobileReportDetails.value.trim();
+    if (workPerformed.length < 2) {
+      elements.mobileReportMessage.textContent = "Bitte die ausgeführten Leistungen eintragen.";
+      elements.mobileReportDetails.focus();
+      return;
+    }
+    const personnel = collectMobileReportPersonnel();
+    if (!personnel.some((entry) => entry.userId === session.user.id)) {
+      elements.mobileReportMessage.textContent = "Bitte die eigenen Stunden für diesen Baustellentag eintragen.";
+      elements.mobileReportPersonnelList.querySelector(`input[data-user-id="${session.user.id}"]`)?.focus();
+      return;
+    }
     const report = {
       clientReportId: createClientEntryId(),
       assignmentId: assignment.id,
@@ -3695,7 +3881,11 @@
       workDate: state.workDate,
       reportType: elements.mobileReportType.value,
       summary,
-      details: elements.mobileReportDetails.value.trim() || null,
+      details: workPerformed,
+      workPerformed,
+      obstructions: elements.mobileReportObstructions.value.trim() || null,
+      openItems: elements.mobileReportOpenItems.value.trim() || null,
+      personnel,
       pendingSync: !demoMode,
       syncError: null
     };
@@ -3907,7 +4097,9 @@
         body: JSON.stringify({
           workDate: destinationDate,
           plannedStartTime: elements.assignmentEditTime.value,
-          reportResponsible: elements.assignmentEditReportResponsible.checked,
+          ...(elements.assignmentEditReportResponsible.disabled
+            ? {}
+            : { reportResponsible: elements.assignmentEditReportResponsible.checked }),
           changeReason
         })
       });

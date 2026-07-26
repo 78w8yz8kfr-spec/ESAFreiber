@@ -159,6 +159,23 @@ export function validateEmployee(body) {
   };
 }
 
+export function validateEmployeeUpdate(body) {
+  rejectTenantFields(body);
+  const role = text(body.role, "Rolle", 2, 50).toLowerCase();
+  if (!EMPLOYEE_ROLES.has(role)) throw new InputError("Die Mitarbeiterrolle ist ungültig.");
+  const rowVersion = Number(body.rowVersion);
+  if (!Number.isSafeInteger(rowVersion) || rowVersion < 1) {
+    throw new InputError("Die Mitarbeiterversion ist ungültig.");
+  }
+  return {
+    personnelNumber: text(body.personnelNumber, "Personalnummer", 1, 30),
+    firstName: text(body.firstName, "Vorname", 1, 100),
+    lastName: text(body.lastName, "Nachname", 1, 100),
+    role,
+    rowVersion
+  };
+}
+
 export function validateSiteBundle(body) {
   rejectTenantFields(body);
   return {
@@ -469,6 +486,30 @@ export function validateSiteMaterialUpdate(body) {
   return { status, rowVersion };
 }
 
+function validateReportPersonnel(value) {
+  if (value === undefined) return { provided: false, entries: [] };
+  if (!Array.isArray(value) || value.length > 100) {
+    throw new InputError("Die Mitarbeiterstunden sind ungültig.");
+  }
+  const seen = new Set();
+  const entries = value.map((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new InputError("Ein Mitarbeiterstundeneintrag ist ungültig.");
+    }
+    const userId = uuid(entry.userId, "Mitarbeiter");
+    if (seen.has(userId)) {
+      throw new InputError("Ein Mitarbeiter darf im Bericht nur einmal vorkommen.");
+    }
+    seen.add(userId);
+    const minutes = Number(entry.minutes);
+    if (!Number.isSafeInteger(minutes) || minutes < 1 || minutes > 1440) {
+      throw new InputError("Die Mitarbeiterstunden müssen zwischen einer Minute und 24 Stunden liegen.");
+    }
+    return { userId, minutes };
+  });
+  return { provided: true, entries };
+}
+
 export function validateSiteReport(body) {
   rejectTenantFields(body);
   const reportType = text(body.reportType, "Berichtsart", 2, 20).toLowerCase();
@@ -482,14 +523,22 @@ export function validateSiteReport(body) {
   if (sourceMode !== "photo" && sourceDocumentId) {
     throw new InputError("Ein Originalfoto darf nur einem fotografierten Papierbericht zugeordnet werden.");
   }
+  const summary = text(body.summary, "Berichtstitel", 2, 200);
+  const details = optionalText(body.details, "Berichtsinhalt", 5000);
+  const personnel = validateReportPersonnel(body.personnel);
   return {
     constructionSiteId: uuid(body.constructionSiteId, "Baustelle"),
     reportType,
     workDate: validateWorkDate(body.workDate),
     sourceMode,
-    summary: text(body.summary, "Berichtstitel", 2, 200),
-    details: optionalText(body.details, "Berichtsinhalt", 5000),
-    sourceDocumentId
+    summary,
+    details,
+    sourceDocumentId,
+    workPerformed: optionalText(body.workPerformed, "Ausgeführte Leistungen", 5000) || details || summary,
+    obstructions: optionalText(body.obstructions, "Behinderungen", 3000),
+    openItems: optionalText(body.openItems, "Offene Punkte", 3000),
+    personnel: personnel.entries,
+    personnelProvided: personnel.provided
   };
 }
 

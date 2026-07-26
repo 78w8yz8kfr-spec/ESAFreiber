@@ -262,6 +262,43 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   const foreman = (await foremanResponse.json()).employee;
   assert.deepEqual(foreman.roles, ["foreman"]);
 
+  const editableEmployeeResponse = await fetch(`${baseUrl}/api/v1/admin/employees`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: plannerCookie },
+    body: JSON.stringify({
+      personnelNumber: `EDIT-${suffix}`,
+      firstName: "Editierbar",
+      lastName: "Montage",
+      role: "installer",
+      temporaryPassword: "Bearbeitung-Start-2026!"
+    })
+  });
+  assert.equal(
+    editableEmployeeResponse.status,
+    201,
+    await editableEmployeeResponse.clone().text()
+  );
+  const editableEmployee = (await editableEmployeeResponse.json()).employee;
+  const employeeUpdateResponse = await fetch(
+    `${baseUrl}/api/v1/admin/employees/${editableEmployee.id}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Cookie: plannerCookie },
+      body: JSON.stringify({
+        personnelNumber: editableEmployee.personnelNumber,
+        firstName: "Erika",
+        lastName: "Vorarbeiterin",
+        role: "foreman",
+        rowVersion: editableEmployee.rowVersion
+      })
+    }
+  );
+  assert.equal(employeeUpdateResponse.status, 200, await employeeUpdateResponse.clone().text());
+  const updatedEditableEmployee = (await employeeUpdateResponse.json()).employee;
+  assert.equal(updatedEditableEmployee.firstName, "Erika");
+  assert.deepEqual(updatedEditableEmployee.roles, ["foreman"]);
+  assert.ok(updatedEditableEmployee.rowVersion > editableEmployee.rowVersion);
+
   const customerResponse = await fetch(`${baseUrl}/api/v1/admin/customers`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: plannerCookie },
@@ -360,6 +397,27 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   assert.equal(structuredSite.status, "active");
   assert.equal(structuredSite.rowVersion, 1);
 
+  const editedForemanAssignmentResponse = await fetch(`${baseUrl}/api/v1/admin/assignments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: plannerCookie },
+    body: JSON.stringify({
+      employeeId: updatedEditableEmployee.id,
+      constructionSiteId: structuredSite.id,
+      workDate: nextBusinessDate(assignmentDate),
+      plannedStartTime: "08:00",
+      comment: "Rolle nach Mitarbeiterbearbeitung",
+      reportResponsible: true
+    })
+  });
+  assert.equal(
+    editedForemanAssignmentResponse.status,
+    201,
+    await editedForemanAssignmentResponse.clone().text()
+  );
+  const editedForemanAssignment = (await editedForemanAssignmentResponse.json()).assignment;
+  assert.equal(editedForemanAssignment.reportResponsible, true);
+  assert.equal(editedForemanAssignment.reportResponsibilitySource, "manual");
+
   const foremanAssignmentResponse = await fetch(`${baseUrl}/api/v1/admin/assignments`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: plannerCookie },
@@ -375,6 +433,7 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   assert.equal(foremanAssignmentResponse.status, 201, await foremanAssignmentResponse.clone().text());
   const foremanAssignment = (await foremanAssignmentResponse.json()).assignment;
   assert.equal(foremanAssignment.reportResponsible, true);
+  assert.equal(foremanAssignment.reportResponsibilitySource, "manual");
 
   const foremanLogin = await fetch(`${baseUrl}/api/v1/session`, {
     method: "POST",
@@ -432,7 +491,11 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
     workDate: assignmentDate,
     sourceMode: "digital",
     summary: "Tagesfortschritt aus dem Integrationstest",
-    details: "Leitungswege vorbereitet und dokumentiert"
+    details: "Leitungswege vorbereitet und dokumentiert",
+    workPerformed: "Leitungswege vorbereitet und Unterverteilung montiert",
+    obstructions: "Material kam 30 Minuten später",
+    openItems: "Beschriftung fertigstellen",
+    personnel: [{ userId: foreman.id, minutes: 450 }]
   };
   const mobileReportResponse = await fetch(`${baseUrl}/api/v1/site-reports`, {
     method: "POST",
@@ -443,6 +506,12 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   const mobileReport = (await mobileReportResponse.json()).siteReport;
   assert.equal(mobileReport.siteAssignmentId, foremanAssignment.id);
   assert.equal(mobileReport.clientReportId, clientReportId);
+  assert.equal(
+    mobileReport.structuredData.workPerformed,
+    "Leitungswege vorbereitet und Unterverteilung montiert"
+  );
+  assert.equal(mobileReport.structuredData.personnel[0].name, "Vera Vorarbeiterin");
+  assert.equal(mobileReport.structuredData.personnel[0].minutes, 450);
 
   const duplicateMobileReportResponse = await fetch(`${baseUrl}/api/v1/site-reports`, {
     method: "POST",
@@ -947,6 +1016,8 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   });
   assert.equal(assignmentResponse.status, 201, await assignmentResponse.clone().text());
   const assignment = (await assignmentResponse.json()).assignment;
+  assert.equal(assignment.reportResponsible, true);
+  assert.equal(assignment.reportResponsibilitySource, "automatic");
 
   const blockedArchiveResponse = await fetch(
     `${baseUrl}/api/v1/admin/construction-sites/${site.id}`,
@@ -1002,7 +1073,10 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
     { headers: { Cookie: employeeCookie } }
   );
   assert.equal(employeeAssignments.status, 200);
-  assert.equal((await employeeAssignments.json()).assignments[0].constructionSite.id, site.id);
+  const employeeAssignment = (await employeeAssignments.json()).assignments[0];
+  assert.equal(employeeAssignment.constructionSite.id, site.id);
+  assert.equal(employeeAssignment.reportResponsible, true);
+  assert.equal(employeeAssignment.reportResponsibilitySource, "automatic");
 
   const assignedInstallerDashboardResponse = await fetch(
     `${baseUrl}/api/v1/construction-sites/${site.id}/dashboard?date=${assignmentDate}`,
@@ -1015,8 +1089,9 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   );
   const assignedInstallerDashboard = (await assignedInstallerDashboardResponse.json()).dashboard;
   assert.equal(assignedInstallerDashboard.site.id, site.id);
-  assert.equal(assignedInstallerDashboard.viewer.canLead, false);
+  assert.equal(assignedInstallerDashboard.viewer.canLead, true);
   assert.equal(assignedInstallerDashboard.viewer.canManage, false);
+  assert.equal(assignedInstallerDashboard.viewer.reportResponsible, true);
 
   const installerPhotoResponse = await fetch(
     `${baseUrl}/api/v1/construction-sites/${site.id}/photos?date=${assignmentDate}`,
@@ -1062,7 +1137,7 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
     headers: { "Content-Type": "application/json", Cookie: employeeCookie },
     body: JSON.stringify({
       clientReportId: randomUUID(),
-      constructionSiteId: site.id,
+      constructionSiteId: structuredSite.id,
       reportType: "montage",
       workDate: assignmentDate,
       sourceMode: "digital",
@@ -1071,6 +1146,57 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   });
   assert.equal(forbiddenInstallerReport.status, 403);
   assert.equal((await forbiddenInstallerReport.json()).error.code, "report_forbidden");
+
+  const secondTeamAssignmentResponse = await fetch(`${baseUrl}/api/v1/admin/assignments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: plannerCookie },
+    body: JSON.stringify({
+      employeeId: updatedEditableEmployee.id,
+      constructionSiteId: site.id,
+      workDate: assignmentDate,
+      plannedStartTime: "07:30",
+      comment: "Zweiter Mitarbeiter beendet automatische Vorarbeiterfunktion"
+    })
+  });
+  assert.equal(
+    secondTeamAssignmentResponse.status,
+    201,
+    await secondTeamAssignmentResponse.clone().text()
+  );
+  const secondTeamAssignment = (await secondTeamAssignmentResponse.json()).assignment;
+  assert.equal(secondTeamAssignment.reportResponsible, false);
+
+  const reassignedEmployeeAssignments = await fetch(
+    `${baseUrl}/api/v1/site-assignments/${assignmentDate}`,
+    { headers: { Cookie: employeeCookie } }
+  );
+  assert.equal(reassignedEmployeeAssignments.status, 200);
+  assert.equal(
+    (await reassignedEmployeeAssignments.json()).assignments[0].reportResponsible,
+    false
+  );
+
+  const manualForemanUpdateResponse = await fetch(
+    `${baseUrl}/api/v1/admin/assignments/${secondTeamAssignment.id}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Cookie: plannerCookie },
+      body: JSON.stringify({
+        workDate: assignmentDate,
+        plannedStartTime: "07:30",
+        reportResponsible: true,
+        changeReason: "Vorarbeiter für das Zweierteam festgelegt"
+      })
+    }
+  );
+  assert.equal(
+    manualForemanUpdateResponse.status,
+    200,
+    await manualForemanUpdateResponse.clone().text()
+  );
+  const manualForemanAssignment = (await manualForemanUpdateResponse.json()).assignment;
+  assert.equal(manualForemanAssignment.reportResponsible, true);
+  assert.equal(manualForemanAssignment.reportResponsibilitySource, "manual");
 
   const forbiddenOverview = await fetch(
     `${baseUrl}/api/v1/admin/overview?date=${assignmentDate}`,

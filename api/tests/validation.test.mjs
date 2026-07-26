@@ -13,6 +13,7 @@ import {
   validateDocumentStatusUpdate,
   validateDocumentUpload,
   validateEmployee,
+  validateEmployeeUpdate,
   validateInitialPasswordChange,
   validateInitialSetup,
   validateLogin,
@@ -170,9 +171,33 @@ test("Baustellenmodule validieren Aufgaben, Material und Berichte", () => {
     workDate: "2026-07-21",
     sourceMode: "digital",
     summary: "Tagesfortschritt",
-    details: "Leitungen verlegt"
+    details: "Leitungen verlegt",
+    workPerformed: "Leitungen und Kabel verlegt",
+    obstructions: "Material verspätet",
+    openItems: "Beschriftung",
+    personnel: [{
+      userId: "44444444-4444-4444-8444-444444444444",
+      minutes: 480
+    }]
   });
   assert.equal(mobileReport.clientReportId, "33333333-3333-4333-8333-333333333333");
+  assert.equal(mobileReport.workPerformed, "Leitungen und Kabel verlegt");
+  assert.equal(mobileReport.personnel[0].minutes, 480);
+  assert.throws(
+    () => validateMobileSiteReport({
+      clientReportId: "33333333-3333-4333-8333-333333333333",
+      constructionSiteId: siteId,
+      reportType: "daily",
+      workDate: "2026-07-21",
+      sourceMode: "digital",
+      summary: "Doppelte Mitarbeiter",
+      personnel: [
+        { userId: "44444444-4444-4444-8444-444444444444", minutes: 60 },
+        { userId: "44444444-4444-4444-8444-444444444444", minutes: 60 }
+      ]
+    }),
+    /nur einmal/
+  );
   assert.throws(() => validateMobileSiteReport({
     ...mobileReport,
     sourceMode: "speech"
@@ -237,6 +262,13 @@ test("Verwaltung validiert Mitarbeiter, Baustelle und Einsatz vollständig", () 
     temporaryPassword: "Startpasswort-2026"
   });
   assert.equal(employee.role, "installer");
+  assert.equal(validateEmployeeUpdate({
+    personnelNumber: "M-17",
+    firstName: "Mara",
+    lastName: "Vorarbeiterin",
+    role: "foreman",
+    rowVersion: 2
+  }).rowVersion, 2);
   for (const role of ["managing_director", "dispatch_office", "project_manager"]) {
     assert.equal(
       validateEmployee({ ...employee, role, temporaryPassword: "Startpasswort-2026" }).role,

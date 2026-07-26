@@ -759,6 +759,68 @@ select:focus-visible {
   margin-top: 5px;
 }
 
+.mobile-report-personnel {
+  display: grid;
+  gap: 8px;
+  margin: 2px 0;
+  padding: 12px;
+  border: 1px solid #dce2de;
+  border-radius: 15px;
+  background: #fff;
+}
+
+.mobile-report-personnel legend {
+  padding: 0 5px;
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+.mobile-report-personnel > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.62rem;
+  line-height: 1.4;
+}
+
+#mobile-report-personnel-list {
+  display: grid;
+  gap: 7px;
+}
+
+.mobile-report-personnel__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mobile-report-personnel__row > span:first-child {
+  overflow: hidden;
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-report-personnel__row > span:last-child {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 96px;
+}
+
+.mobile-report-personnel__row input {
+  min-height: 42px;
+  padding: 0 8px;
+  text-align: right;
+}
+
+.mobile-report-personnel__row small {
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
 .mobile-report-hint {
   color: var(--muted);
   font-size: 0.64rem;

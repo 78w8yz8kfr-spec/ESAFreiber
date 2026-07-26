@@ -42,6 +42,8 @@ assert.match(html, /id="site-planning-content"/);
 assert.match(html, /id="nav-assignments"/);
 assert.match(html, /id="nav-sites"/);
 assert.match(html, /id="employee-form"/);
+assert.match(html, /id="employee-edit-form"/);
+assert.match(html, /id="employee-edit-role"/);
 assert.match(html, /id="customer-form"/);
 assert.match(html, /id="customer-management-panel"/);
 assert.match(html, /id="customer-search"/);
@@ -122,11 +124,14 @@ assert.doesNotMatch(html, /<section id="assignment-import-panel"[^>]*hidden>/);
 assert.doesNotMatch(html, /<section id="site-import-panel"[^>]*hidden>/);
 assert.doesNotMatch(html, /id="assignment-import-body" class="inline-import__body" hidden/);
 assert.doesNotMatch(html, /id="site-import-body" class="inline-import__body" hidden/);
-assert.match(html, /styles\.css\?v=0\.22\.0/);
-assert.match(html, /app\.js\?v=0\.22\.0/);
-assert.match(html, /version\.js\?v=0\.22\.0/);
+assert.match(html, /styles\.css\?v=0\.23\.0/);
+assert.match(html, /app\.js\?v=0\.23\.0/);
+assert.match(html, /version\.js\?v=0\.23\.0/);
 assert.match(html, /id="mobile-report-card"/);
 assert.match(html, /id="mobile-report-form"/);
+assert.match(html, /id="mobile-report-personnel-list"/);
+assert.match(html, /id="mobile-report-obstructions"/);
+assert.match(html, /id="mobile-report-open-items"/);
 assert.match(html, /id="employee-site-workspace"/);
 assert.match(html, /id="employee-site-team"/);
 assert.match(html, /id="employee-site-tasks"/);
@@ -176,6 +181,7 @@ assert.match(styles, /\.site-module-list/);
 assert.match(styles, /\.employee-site-workspace/);
 assert.match(styles, /\.employee-site-module/);
 assert.match(styles, /\.employee-site-photo-grid/);
+assert.match(styles, /\.mobile-report-personnel/);
 assert.match(styles, /\.company-context__mark--logo/);
 assert.match(styles, /\.company-brand-line__mark--logo/);
 assert.match(styles, /--brand: #e30613/);
@@ -191,6 +197,9 @@ assert.match(app, /\.\/api\/v1\/session/);
 assert.match(app, /\.\/api\/v1\/setup/);
 assert.match(app, /\.\/api\/v1\/account\/initial-password/);
 assert.match(app, /\.\/api\/v1\/admin\/employees/);
+assert.match(app, /openEmployeeEditor/);
+assert.match(app, /collectMobileReportPersonnel/);
+assert.match(app, /reportResponsibilitySource/);
 assert.match(app, /\.\/api\/v1\/admin\/customers/);
 assert.match(app, /\.\/api\/v1\/admin\/projects/);
 assert.match(app, /\.\/api\/v1\/admin\/construction-sites/);
@@ -268,9 +277,9 @@ for (const asset of [
 ]) {
   assert.ok(worker.includes(`"${asset}"`), `${asset} fehlt im App-Shell-Cache`);
 }
-assert.ok(worker.includes('"./styles.css?v=0.22.0"'));
-assert.ok(worker.includes('"./app.js?v=0.22.0"'));
-assert.ok(worker.includes('"./version.js?v=0.22.0"'));
+assert.ok(worker.includes('"./styles.css?v=0.23.0"'));
+assert.ok(worker.includes('"./app.js?v=0.23.0"'));
+assert.ok(worker.includes('"./version.js?v=0.23.0"'));
 assert.match(
   styles,
   /\.login-form input,\s*\.admin-form input,\s*\.admin-form select\s*\{\s*height: 52px;/,

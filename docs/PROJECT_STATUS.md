@@ -1,7 +1,7 @@
 # Projektstatus
 
 Stand: 26.07.2026
-Technischer Stand: V0.22.0
+Technischer Stand: V0.23.0
 
 ## Abgeschlossen
 
@@ -126,6 +126,11 @@ Technischer Stand: V0.22.0
 - Monteure sehen eigene und allgemeine Aufgaben, Vorarbeiter zusätzlich das vollständige Baustellenteam und alle Baustelleninhalte
 - direkter Kamera-Upload für Baustellenfotos mit zentraler Ein-Dokument-Speicherung und geschütztem Abruf
 - zuletzt geladene Baustellenmetadaten bleiben für die Ansicht ohne Verbindung auf dem Gerät verfügbar
+- Migration 025 ergänzt Montage- und Bautagesberichte um ausgeführte Leistungen, Behinderungen, offene Punkte und geprüfte Mitarbeiterstunden
+- die mobile Berichtsmaske übernimmt das eingeplante Baustellenteam und erzeugt eine entsprechend gegliederte Abschluss-PDF
+- Mitarbeiter können mit Versionskonfliktschutz bearbeitet und einer anderen Betriebsrolle zugeordnet werden
+- Migration 026 unterscheidet manuelle Vorarbeiterplanung von automatischer Berichtsverantwortung
+- ist nur ein Mitarbeiter an einer Baustelle eingeplant, übernimmt er dort automatisch die Vorarbeiter- und Berichtsfunktion; bei einer Teamänderung wird die automatische Funktion wieder aufgehoben
 
 ## Noch zu prüfen
 
@@ -137,12 +142,11 @@ Technischer Stand: V0.22.0
 
 ## Nächster Entwicklungsschritt
 
-Die mobile Baustellenakte wird als Nächstes um echte Arbeitsaktionen ergänzt:
-
-- eigene Aufgaben mobil beginnen und abschließen
-- strukturierte Angaben in Montage- und Bautagesberichten
-- eigene Baustellennotizen ohne Aktivitätschronik
-- danach dauerhafte Datenbank, Backup-Plan, Überwachung und Objektspeicher für den Betriebsstart festlegen
+Die mobile Baustellenakte wird als Nächstes um eigene Baustellennotizen ohne
+Aktivitätschronik ergänzt. Danach werden dauerhafte Datenbank, Backup-Plan,
+Überwachung und Objektspeicher für den Betriebsstart festgelegt. Mobile
+Aufgabenaktionen bleiben gemäß der aktuellen Priorisierung zunächst
+übersprungen.
 
 Die öffentliche GitHub-Pages-PWA bleibt eindeutig als lokale Demo
 gekennzeichnet; die echte Anmeldung läuft ausschließlich auf der gemeinsamen

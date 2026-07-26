@@ -1,6 +1,6 @@
 # Schäfchen Online bereitstellen
 
-Technischer Stand: V0.22.0
+Technischer Stand: V0.23.0
 
 Das Firmenlogo von Schaaf Elektro stammt unverändert aus dem bestehenden
 VDE-Prüfprotokoll. Es wird im Login und App-Kopfbereich getrennt vom
@@ -30,6 +30,14 @@ zugewiesene Baustelle mit Arbeitsauftrag, Navigation, Team, Aufgaben, Berichten,
 Dokumenten, Fotos und Material. **Foto aufnehmen** verwendet direkt die
 Handykamera. Fremde oder nicht für diesen Tag freigegebene Baustellen werden
 serverseitig abgewiesen.
+
+Im Bereich **Mehr** können Planungsrollen Mitarbeiter über **Bearbeiten**
+aktualisieren und ihre Betriebsrolle ändern. Wird ein Monteur allein für eine
+Baustelle eingeplant, übernimmt er nur für diesen Baustellentag automatisch die
+Vorarbeiter- und Berichtsverantwortung. Bei einem Team aus mehreren
+Mitarbeitern wird ein Vorarbeiter ausdrücklich in der Einsatzplanung bestimmt.
+Der mobile Bericht fragt Leistungen, Behinderungen, offene Punkte und die
+Stunden des eingeplanten Teams ab.
 
 Kunden und Projekte besitzen im Bereich **Baustellen** jeweils eine dauerhaft
 sichtbare, durchsuchbare Verwaltung. Die Anlegeformulare bleiben kompakt

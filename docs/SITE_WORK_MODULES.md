@@ -1,7 +1,7 @@
 # Baustellenarbeit: Aufgaben, Material und Berichte
 
 Stand: 26.07.2026
-Technischer Stand: V0.22.0
+Technischer Stand: V0.23.0
 
 ## Bedienkonzept
 
@@ -64,8 +64,9 @@ keine zweite Dateikopie.
 ## Montage- und Bautagesberichte
 
 `site_reports` speichert Montage- oder Bautagesbericht, Arbeitstag, Titel,
-Inhalt, Autor, Status und Erfassungsart. Drei gleichwertige Einstiege sind
-vorgesehen:
+Autor, Status und Erfassungsart. `structured_data` enthält ausgeführte
+Leistungen, Behinderungen, offene Punkte und die serverseitig geprüften
+Mitarbeiterstunden. Drei gleichwertige Einstiege sind vorgesehen:
 
 1. **Digital erstellen** – Text direkt eingeben.
 2. **Papierbericht fotografieren** – das unveränderte Originalfoto einmal im
@@ -83,9 +84,11 @@ keine Dokumentkopie.
 
 - Die Firma wird ausschließlich aus der Sitzung übernommen.
 - Planungsrollen dürfen Berichte im Baustellen-Dashboard verwalten und abschließen.
-- Der mobile Berichts-Endpunkt ist ausschließlich für den am betreffenden Tag und
-  an der betreffenden Baustelle als berichtspflichtig eingeteilten Vorarbeiter
-  freigeschaltet. Eine allgemeine Vorarbeiterrolle allein genügt nicht.
+- Der mobile Berichts-Endpunkt ist ausschließlich für den am betreffenden Tag
+  und an der betreffenden Baustelle berichtspflichtigen Mitarbeiter
+  freigeschaltet. Das ist entweder der manuell eingeteilte Vorarbeiter oder bei
+  einem Alleineinsatz automatisch der einzige Monteur. Eine allgemeine
+  Vorarbeiterrolle allein genügt nicht.
 - Baustellen und zugewiesene Mitarbeiter müssen aktiv und im selben Mandanten
   vorhanden sein.
 - Fremde Dokumente oder Dokumente einer anderen Baustelle werden abgewiesen.
@@ -102,18 +105,13 @@ Baustellendaten. PDF und Bericht sind anschließend unveränderlich. Die PDF wir
 als zentrales Dokument einmal gespeichert und automatisch mit Kunde, Projekt
 und Baustelle verknüpft.
 
-## Nächster Ausbau
-
-Als nächstes werden die mobilen Berichtsinhalte um strukturierte Angaben wie
-eingesetzte Mitarbeiter, Stunden, ausgeführte Leistungen, Behinderungen und
-offene Punkte ergänzt. Die vorhandene Vorarbeiterprüfung bleibt dafür die
-verbindliche Berechtigungsgrenze.
-
 ## Mobiler Tagesabschluss
 
-`site_assignments.report_responsible` bestimmt genau einen Vorarbeiter je
-Baustelle und Arbeitstag. Beim Antippen von „Baustelle verlassen“ öffnet sich
-nur für diesen Mitarbeiter die Auswahl zwischen Montage- und Bautagesbericht.
+`site_assignments.report_responsible` bestimmt genau einen Verantwortlichen je
+Baustelle und Arbeitstag. `report_responsibility_source` unterscheidet die
+manuelle Einteilung eines Vorarbeiters von der automatischen Verantwortung bei
+einem Alleineinsatz. Beim Antippen von „Baustelle verlassen“ öffnet sich nur
+für diesen Mitarbeiter die Auswahl zwischen Montage- und Bautagesbericht.
 Der Bericht wird über `site_assignment_id` unverwechselbar mit dem Einsatz
 verbunden. `client_report_id` verhindert auch nach einem Verbindungsabbruch
 Doppelanlage.

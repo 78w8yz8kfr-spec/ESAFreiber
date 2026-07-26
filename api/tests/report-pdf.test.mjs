@@ -17,6 +17,16 @@ test("freigegebener Bericht wird als unveränderliche PDF-Ausgabe erzeugt", asyn
       workDate: "2026-07-21",
       summary: "Unterverteilung montiert",
       details: "Leitungen aufgelegt und Stromkreise beschriftet.",
+      structuredData: {
+        workPerformed: "Leitungen aufgelegt und Stromkreise beschriftet.",
+        obstructions: "Keine",
+        openItems: "Messung abschließen",
+        personnel: [{
+          userId: "33333333-3333-4333-8333-333333333333",
+          name: "Max Monteur",
+          minutes: 480
+        }]
+      },
       authorName: "Max Monteur"
     },
     company: {
@@ -47,5 +57,5 @@ test("freigegebener Bericht wird als unveränderliche PDF-Ausgabe erzeugt", asyn
   assert.equal(pdf.subarray(0, 5).toString("ascii"), "%PDF-");
   const loaded = await PDFDocument.load(pdf);
   assert.equal(loaded.getTitle(), "Montagebericht SE-R-2026-00001");
-  assert.equal(loaded.getPageCount(), 1);
+  assert.equal(loaded.getPageCount(), 2);
 });

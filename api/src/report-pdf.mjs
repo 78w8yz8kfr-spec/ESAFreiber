@@ -25,6 +25,13 @@ function germanTimestamp(value) {
   }).format(new Date(value));
 }
 
+function hoursAndMinutes(minutes) {
+  const value = Math.max(0, Number(minutes) || 0);
+  const hours = Math.floor(value / 60);
+  const remainder = value % 60;
+  return `${hours}:${String(remainder).padStart(2, "0")} h`;
+}
+
 function wrapText(text, font, size, width) {
   const paragraphs = String(text || "-").replace(/\r/g, "").split("\n");
   const lines = [];
@@ -170,9 +177,46 @@ export async function buildFinalReportPdf({
   keyValue("Anschrift", context.siteAddress, 310, 240);
   y -= 48;
 
-  section("Ausgeführte Arbeiten und Hinweise");
-  paragraph(report.details || "Keine zusätzlichen Angaben.");
+  const structured = report.structuredData || {};
+  const personnel = Array.isArray(structured.personnel) ? structured.personnel : [];
+  if (personnel.length > 0) {
+    section("Eingesetzte Mitarbeiter");
+    for (const employee of personnel) {
+      ensureSpace(20);
+      page.drawText(employee.name || "-", {
+        x: margin,
+        y,
+        size: 10,
+        font: regular,
+        color: INK
+      });
+      page.drawText(hoursAndMinutes(employee.minutes), {
+        x: A4[0] - margin - 65,
+        y,
+        size: 10,
+        font: bold,
+        color: INK
+      });
+      y -= 16;
+    }
+    y -= 4;
+  }
+
+  section("Ausgeführte Leistungen");
+  paragraph(structured.workPerformed || report.details || report.summary);
   y -= 8;
+
+  if (structured.obstructions) {
+    section("Behinderungen");
+    paragraph(structured.obstructions);
+    y -= 8;
+  }
+
+  if (structured.openItems) {
+    section("Offene Punkte");
+    paragraph(structured.openItems);
+    y -= 8;
+  }
 
   section("Unterschriften");
   ensureSpace(150);
