@@ -63,6 +63,15 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'Strukturierte Berichtsdaten wurden nicht vollständig gespeichert';
     END IF;
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_trigger
+        WHERE tgrelid = 'site_reports'::REGCLASS
+          AND tgname = 'site_reports_before_write_trigger'
+          AND NOT tgisinternal
+    ) THEN
+        RAISE EXCEPTION 'Der Schreibschutz-Trigger wurde nach dem Backfill nicht wieder eingerichtet';
+    END IF;
 
     BEGIN
         UPDATE site_reports

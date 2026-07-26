@@ -3,6 +3,12 @@ BEGIN;
 ALTER TABLE site_reports
     ADD COLUMN IF NOT EXISTS structured_data JSONB NOT NULL DEFAULT '{}'::JSONB;
 
+-- Der technische Backfill muss auch freigegebene Altberichte ergänzen können.
+-- Der bisherige Trigger sperrt bei diesen Datensätzen absichtlich jedes UPDATE;
+-- deshalb wird er nur innerhalb dieser Transaktion entfernt und unten mit der
+-- bisherigen Fachlogik plus Strukturstandard wieder angelegt.
+DROP TRIGGER IF EXISTS site_reports_before_write_trigger ON site_reports;
+
 UPDATE site_reports
 SET structured_data = jsonb_build_object(
     'workPerformed', COALESCE(NULLIF(BTRIM(details), ''), summary),
@@ -151,6 +157,10 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+CREATE TRIGGER site_reports_before_write_trigger
+    BEFORE INSERT OR UPDATE ON site_reports
+    FOR EACH ROW EXECUTE FUNCTION site_reports_before_write();
 
 COMMENT ON COLUMN site_reports.structured_data IS
     'Strukturierte Leistungen, Behinderungen, offene Punkte sowie serverseitig aufgelöste Mitarbeiterstunden.';
