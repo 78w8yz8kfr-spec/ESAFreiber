@@ -81,12 +81,13 @@ API stellt mindestens folgende Endpunkte bereit, bevor der Login produktiv wird:
 - `POST /api/v1/time-entry-corrections` – begründete Korrektur beantragen
 - `PATCH /api/v1/admin/time-entry-corrections/{id}` – Korrektur genehmigen oder ablehnen
 
-Die chronologische Liste im Startbereich bleibt eine ruhige Live-Anzeige ohne
-Bearbeitungsbedienelemente. Im Wochen-Stundenzettel besitzt jede bereits
-synchronisierte Buchung die Aktion `Ändern`. Der Mitarbeiter gibt in einer
-kompakten mobilen Korrekturfläche die richtige Uhrzeit und einen Grund an; die
-ursprüngliche Buchung bleibt bis zur Entscheidung sichtbar und wirksam. Offene
-Anträge erscheinen für berechtigte Rollen direkt unter dem Wochen-Stundenzettel
-mit alter Uhrzeit, neuer Uhrzeit und Begründung.
+Die chronologische Liste im Startbereich bleibt eine ruhige Live-Anzeige, bietet
+aber an jeder synchronisierten Buchung direkt die Aktion `Korrigieren`. Dieselbe
+Möglichkeit bleibt zusätzlich an jeder Buchung im Wochen-Stundenzettel
+vorhanden. Der Mitarbeiter gibt in einer kompakten mobilen Korrekturfläche die
+richtige Uhrzeit und einen Grund an; die ursprüngliche Buchung bleibt bis zur
+Entscheidung sichtbar und wirksam. Offene Anträge erscheinen für berechtigte
+Rollen direkt unter dem Wochen-Stundenzettel mit alter Uhrzeit, neuer Uhrzeit
+und Begründung.
 
 Passwörter, Passwort-Hashes und `company_id` werden nie vom Frontend verwaltet.

@@ -668,7 +668,7 @@
     elements.passwordState.textContent = demoMode ? "In der Demo inaktiv" : "Sicher verschlüsselt";
     elements.loginSubmit.classList.toggle("button--secondary", demoMode);
     elements.loginSubmit.classList.toggle("button--primary", !demoMode);
-    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.28.0 ${demoMode ? "Demo" : "Online"}`;
+    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.28.1 ${demoMode ? "Demo" : "Online"}`;
 
     if (demoMode) {
       elements.modeNoteText.replaceChildren();
@@ -3196,6 +3196,7 @@
       const content = document.createElement("div");
       const label = document.createElement("strong");
       const meta = document.createElement("span");
+      const correction = document.createElement("button");
       marker.setAttribute("aria-hidden", "true");
       label.textContent = entryLabel(entry);
       const status = demoMode
@@ -3205,7 +3206,25 @@
         entry.pendingCorrection ? "Änderung wird geprüft" : status
       }`;
       content.append(label, meta);
-      item.append(marker, content);
+      correction.type = "button";
+      correction.className = entry.pendingCorrection
+        ? "entry-list__correction entry-list__correction--pending"
+        : "entry-list__correction";
+      correction.textContent = entry.pendingCorrection ? "Prüfung offen" : "Korrigieren";
+      correction.setAttribute(
+        "aria-label",
+        entry.pendingCorrection
+          ? `${entryLabel(entry)}: Korrektur wird geprüft`
+          : `${entryLabel(entry)} korrigieren`
+      );
+      correction.disabled = demoMode
+        || Boolean(entry.pendingSync)
+        || Boolean(entry.syncError)
+        || Boolean(entry.pendingCorrection);
+      if (!correction.disabled) {
+        correction.addEventListener("click", () => openTimeCorrectionForm(entry));
+      }
+      item.append(marker, content, correction);
       elements.entryList.append(item);
     });
   }

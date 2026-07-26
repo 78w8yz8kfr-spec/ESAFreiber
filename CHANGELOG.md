@@ -4,11 +4,17 @@ Alle wesentlichen Änderungen an Schäfchen werden in dieser Datei dokumentiert.
 
 ## [Unreleased]
 
+### V0.28.1 – Korrektur auch auf Start
+
+- der rote Korrekturzugang steht wieder direkt an jeder synchronisierten Buchung im Start-Stundenzettel
+- bereits eingereichte Änderungen zeigen dort eindeutig „Prüfung offen“
+- die vollständige Korrekturmöglichkeit im Wochen-Stundenzettel bleibt zusätzlich bestehen
+
 ### V0.28.0 – Wochen-Stundenzettel
 
 - neuer vollständiger Wochen-Stundenzettel mit Arbeit, Pause und Fahrt als Wochensumme
 - Montag bis Sonntag werden als ruhige Tageskarten mit Status, Tageswerten und allen einzelnen Buchungen dargestellt
-- Zeitkorrekturen bleiben erhalten, werden aber ausschließlich an der passenden Buchung im Wochen-Stundenzettel geöffnet
+- Zeitkorrekturen können an der passenden Buchung im Wochen-Stundenzettel geöffnet werden
 - Korrekturen erscheinen als kompakte mobile Eingabefläche; bis zur Prüfung bleibt die bisherige Uhrzeit sichtbar
 - offene Korrekturen liegen für berechtigte Bürorollen direkt im Bereich Woche statt in der Einsatzplanung
 - neuer geschützter Wochenendpunkt liefert die eigenen sieben Kalendertage einschließlich wirksamer Buchungen und Wochensummen

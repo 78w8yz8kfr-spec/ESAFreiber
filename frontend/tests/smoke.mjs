@@ -130,9 +130,9 @@ assert.doesNotMatch(html, /<section id="assignment-import-panel"[^>]*hidden>/);
 assert.doesNotMatch(html, /<section id="site-import-panel"[^>]*hidden>/);
 assert.doesNotMatch(html, /id="assignment-import-body" class="inline-import__body" hidden/);
 assert.doesNotMatch(html, /id="site-import-body" class="inline-import__body" hidden/);
-assert.match(html, /styles\.css\?v=0\.28\.0/);
-assert.match(html, /app\.js\?v=0\.28\.0/);
-assert.match(html, /version\.js\?v=0\.28\.0/);
+assert.match(html, /styles\.css\?v=0\.28\.1/);
+assert.match(html, /app\.js\?v=0\.28\.1/);
+assert.match(html, /version\.js\?v=0\.28\.1/);
 assert.match(html, /id="mobile-report-card"/);
 assert.match(html, /id="mobile-report-form"/);
 assert.match(html, /id="mobile-report-personnel-list"/);
@@ -168,6 +168,7 @@ assert.match(styles, /\.time-summary/);
 assert.match(styles, /\.status-timer/);
 assert.doesNotMatch(styles, /\.live-overview/);
 assert.match(styles, /\.entry-list/);
+assert.match(styles, /\.entry-list__correction/);
 assert.match(styles, /\.week-time-entry__action/);
 assert.match(styles, /\.week-timesheet-day/);
 assert.match(styles, /\.time-correction-dialog/);
@@ -279,6 +280,8 @@ assert.match(app, /\.\/api\/v1\/time-entry-corrections/);
 assert.match(app, /\.\/api\/v1\/admin\/time-entry-corrections\//);
 assert.match(app, /Änderung wird geprüft/);
 assert.match(app, /Prüfung offen/);
+assert.match(app, /entry-list__correction/);
+assert.match(app, /Korrigieren/);
 assert.match(app, /renderTimeCorrections/);
 assert.doesNotMatch(app, /liveDuration\.textContent = formatMinutes\(times\.gross\)/);
 assert.doesNotMatch(app, /geolocation/i, "Die Demo darf keine GPS- oder Standortabfrage enthalten");
@@ -305,9 +308,9 @@ for (const asset of [
 ]) {
   assert.ok(worker.includes(`"${asset}"`), `${asset} fehlt im App-Shell-Cache`);
 }
-assert.ok(worker.includes('"./styles.css?v=0.28.0"'));
-assert.ok(worker.includes('"./app.js?v=0.28.0"'));
-assert.ok(worker.includes('"./version.js?v=0.28.0"'));
+assert.ok(worker.includes('"./styles.css?v=0.28.1"'));
+assert.ok(worker.includes('"./app.js?v=0.28.1"'));
+assert.ok(worker.includes('"./version.js?v=0.28.1"'));
 assert.match(
   styles,
   /\.login-form input,\s*\.admin-form input,\s*\.admin-form select\s*\{\s*height: 52px;/,
