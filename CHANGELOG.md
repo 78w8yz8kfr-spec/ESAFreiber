@@ -4,6 +4,13 @@ Alle wesentlichen Änderungen an Schäfchen werden in dieser Datei dokumentiert.
 
 ## [Unreleased]
 
+### V0.25.1 – Netto-Arbeitszeit im Stundenzettel
+
+- die große rote Stundenzettel-Anzeige zeigt jetzt die tatsächliche Netto-Arbeitszeit
+- Pausen und Unterbrechungen zwischen mehreren Arbeitsblöcken werden sichtbar von der Bruttozeit abgezogen
+- Bruttozeit, Pause, Arbeit und Fahrt bleiben zur Kontrolle getrennt ausgewiesen
+- PWA-Smoke-Test schützt die Nettoanzeige vor einer erneuten Verwechslung mit der Bruttozeit
+
 ### V0.25.0 – Gemeinsame Baustellennotizen
 
 - eigener ruhiger Notizbereich direkt in jeder Baustelle statt einer globalen Aktivitätschronik

@@ -1,11 +1,12 @@
 # Projektstatus
 
 Stand: 26.07.2026
-Technischer Stand: V0.25.0
+Technischer Stand: V0.25.1
 
 ## Abgeschlossen
 
 - Login-Darstellung mit ursprünglicher Feldhöhe und korrekt positionierter Passwortanzeige wiederhergestellt
+- große Stundenzettel-Anzeige auf Netto-Arbeitszeit umgestellt; Pausen und Unterbrechungen bleiben getrennt nachvollziehbar
 
 - Phase 0: Vision, Anforderungen, Rollenmodell und ER-Struktur mit 20 Kerntabellen
 - GitHub-Projektbasis und verbindliche Entwicklungsregeln

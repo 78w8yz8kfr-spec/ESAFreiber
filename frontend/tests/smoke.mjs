@@ -124,9 +124,9 @@ assert.doesNotMatch(html, /<section id="assignment-import-panel"[^>]*hidden>/);
 assert.doesNotMatch(html, /<section id="site-import-panel"[^>]*hidden>/);
 assert.doesNotMatch(html, /id="assignment-import-body" class="inline-import__body" hidden/);
 assert.doesNotMatch(html, /id="site-import-body" class="inline-import__body" hidden/);
-assert.match(html, /styles\.css\?v=0\.25\.0/);
-assert.match(html, /app\.js\?v=0\.25\.0/);
-assert.match(html, /version\.js\?v=0\.25\.0/);
+assert.match(html, /styles\.css\?v=0\.25\.1/);
+assert.match(html, /app\.js\?v=0\.25\.1/);
+assert.match(html, /version\.js\?v=0\.25\.1/);
 assert.match(html, /id="mobile-report-card"/);
 assert.match(html, /id="mobile-report-form"/);
 assert.match(html, /id="mobile-report-personnel-list"/);
@@ -262,6 +262,8 @@ assert.match(app, /gross >= 360 \? 60 : gross >= 210 \? 30/);
 assert.match(app, /Arbeitstag erneut starten/);
 assert.match(app, /latest\.type === "clock_out"\) addEntry\("clock_in"\)/);
 assert.match(app, /const explicitPause = Math\.max\(gross - recordedWork, 0\)/);
+assert.match(app, /liveDuration\.textContent = formatMinutes\(times\.work\)/);
+assert.doesNotMatch(app, /liveDuration\.textContent = formatMinutes\(times\.gross\)/);
 assert.doesNotMatch(app, /geolocation/i, "Die Demo darf keine GPS- oder Standortabfrage enthalten");
 
 assert.equal(manifest.name, "Schäfchen");
@@ -286,9 +288,9 @@ for (const asset of [
 ]) {
   assert.ok(worker.includes(`"${asset}"`), `${asset} fehlt im App-Shell-Cache`);
 }
-assert.ok(worker.includes('"./styles.css?v=0.25.0"'));
-assert.ok(worker.includes('"./app.js?v=0.25.0"'));
-assert.ok(worker.includes('"./version.js?v=0.25.0"'));
+assert.ok(worker.includes('"./styles.css?v=0.25.1"'));
+assert.ok(worker.includes('"./app.js?v=0.25.1"'));
+assert.ok(worker.includes('"./version.js?v=0.25.1"'));
 assert.match(
   styles,
   /\.login-form input,\s*\.admin-form input,\s*\.admin-form select\s*\{\s*height: 52px;/,
