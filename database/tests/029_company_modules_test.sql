@@ -79,6 +79,7 @@ BEGIN
         RAISE EXCEPTION USING ERRCODE = 'ZXM01', MESSAGE = 'Unbekanntes Modul wurde akzeptiert';
     EXCEPTION
         WHEN check_violation THEN NULL;
+        WHEN SQLSTATE 'P0001' THEN NULL;
     END;
 
     BEGIN
