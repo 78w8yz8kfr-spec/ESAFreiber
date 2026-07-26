@@ -39,7 +39,7 @@ test("Elektro-Module verlangen bekannten Schlüssel Status und Versionsstand", (
     { moduleKey: "vde", enabled: true, rowVersion: 0 }
   );
   assert.throws(
-    () => validateCompanyModuleUpdate("rechnung", { enabled: true, rowVersion: 0 }),
+    () => validateCompanyModuleUpdate("lwl", { enabled: true, rowVersion: 0 }),
     /Elektro-Spezialmodul/
   );
   assert.throws(

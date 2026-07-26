@@ -11,7 +11,7 @@ Prüfprogrammen durch einen gemeinsamen Datenbestand vom Büro bis zur Baustelle
 
 Der gemeinsame Kern darf später für weitere Gewerke erweitert werden. Diese
 Möglichkeit macht Schäfchen in der aktuellen Entwicklungsphase jedoch nicht zu
-einer allgemeinen Handwerker-App. VDE, DGUV, LWL und KNX bleiben optionale
+einer allgemeinen Handwerker-App. VDE und DGUV bleiben optionale
 Elektro-Spezialmodule und sind nicht der fachliche Kern.
 
 ## Verbindliche Grundsätze
@@ -83,5 +83,5 @@ werden.
 
 Vorgesehen sind Kunden, Projekte, Baustellen, Zeiten, Wochenplanung,
 Mitarbeiter, Dokumente, Aufgaben, Material, Lager, Fahrzeuge, CRM, Rechnungen,
-Wartung sowie die Spezialmodule VDE, LWL, DGUV und KNX. Neue Module verwenden
+Wartung sowie die Spezialmodule VDE und DGUV. Neue Module verwenden
 den gemeinsamen Kern und führen keine parallelen Stammdaten ein.

@@ -216,7 +216,7 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   });
   assert.equal(initialModulesResponse.status, 200);
   const initialModules = (await initialModulesResponse.json()).modules;
-  assert.deepEqual(initialModules.map((module) => module.key), ["vde", "dguv", "lwl", "knx"]);
+  assert.deepEqual(initialModules.map((module) => module.key), ["vde", "dguv"]);
   assert.ok(initialModules.every((module) => !module.enabled && module.rowVersion === 0));
 
   const forbiddenModuleAdministration = await fetch(`${baseUrl}/api/v1/admin/modules`, {

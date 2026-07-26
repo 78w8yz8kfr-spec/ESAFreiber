@@ -1,11 +1,11 @@
 # Optionale Elektro-Spezialmodule
 
 Stand: 26.07.2026
-Technischer Stand: V0.26.0
+Technischer Stand: V0.26.1
 
 ## Ziel
 
-VDE, DGUV, LWL und KNX werden als optionale Fachmodule an denselben Firmen-,
+VDE und DGUV werden als optionale Fachmodule an denselben Firmen-,
 Kunden-, Projekt-, Baustellen-, Mitarbeiter- und Dokumentenbestand angebunden.
 Ein Modul erzeugt keine parallelen Stammdaten.
 
@@ -31,4 +31,4 @@ Menüpunkte oder funktionslosen Platzhalter angezeigt.
 1. VDE als vorhandene fachliche Quelle kontrolliert anbinden.
 2. Gemeinsame Verknüpfung zu Kunde, Projekt, Baustelle, Mitarbeiter und
    Dokument herstellen.
-3. Erst danach DGUV, LWL und KNX nach demselben Muster ergänzen.
+3. Danach DGUV nach demselben Muster ergänzen.

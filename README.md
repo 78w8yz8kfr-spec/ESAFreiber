@@ -3,8 +3,8 @@
 Schäfchen ist eine modulare All-in-One-Unternehmenssoftware, die zunächst für
 Elektrobetriebe entwickelt wird. Die Progressive Web App verbindet eine besonders einfache
 Live-Oberfläche für Monteure mit der Verwaltung für Geschäftsführung,
-Administrator, Büro/Disposition, Projektleitung und Vorarbeiter. VDE, DGUV,
-LWL und KNX sind optionale Spezialmodule auf demselben gemeinsamen Kern.
+Administrator, Büro/Disposition, Projektleitung und Vorarbeiter. VDE und DGUV
+sind optionale Spezialmodule auf demselben gemeinsamen Kern.
 
 ## Projektstand
 
@@ -126,7 +126,7 @@ make frontend-serve # PWA unter http://localhost:4173 öffnen
 - Das Frontend greift ausschließlich über eine API auf Daten zu.
 - Keine Datenbankänderung ohne Migration, Test und Dokumentationsupdate.
 - Ein Datenbestand für alle Module; Dokumente und Stammdaten werden referenziert statt kopiert.
-- VDE, LWL, DGUV und KNX werden als optionale Spezialmodule angebunden.
+- VDE und DGUV werden als optionale Spezialmodule angebunden.
 
 Die technische Struktur und der aktuelle Umsetzungsstand stehen unter
 [`docs/`](docs/). Das Sprint-2-Modell ist in

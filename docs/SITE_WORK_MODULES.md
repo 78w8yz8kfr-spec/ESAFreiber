@@ -1,7 +1,7 @@
 # Baustellenarbeit: Aufgaben, Notizen, Material und Berichte
 
 Stand: 26.07.2026
-Technischer Stand: V0.26.0
+Technischer Stand: V0.26.1
 
 ## Bedienkonzept
 

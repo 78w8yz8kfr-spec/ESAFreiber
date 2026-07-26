@@ -43,7 +43,7 @@ const SITE_TASK_STATUSES = new Set(["open", "in_progress", "done", "archived"]);
 const SITE_MATERIAL_STATUSES = new Set(["planned", "ordered", "available", "used", "archived"]);
 const SITE_REPORT_TYPES = new Set(["montage", "daily"]);
 const SITE_REPORT_SOURCES = new Set(["digital", "photo", "speech"]);
-const ELECTRICAL_MODULE_KEYS = new Set(["vde", "dguv", "lwl", "knx"]);
+const ELECTRICAL_MODULE_KEYS = new Set(["vde", "dguv"]);
 const PNG_DATA_URL_PREFIX = "data:image/png;base64,";
 
 export class InputError extends Error {

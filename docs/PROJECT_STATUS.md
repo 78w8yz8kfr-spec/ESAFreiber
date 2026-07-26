@@ -1,7 +1,7 @@
 # Projektstatus
 
 Stand: 26.07.2026
-Technischer Stand: V0.26.0
+Technischer Stand: V0.26.1
 
 ## Abgeschlossen
 
@@ -139,9 +139,10 @@ Technischer Stand: V0.26.0
 - Büro und berechtigt eingeplante Mitarbeiter sehen denselben thematischen Notizbestand direkt in der Baustellenakte
 - wichtige Hinweise werden hervorgehoben; Verfasser und Erstellungszeitpunkt bleiben nachvollziehbar
 - eine Client-UUID verhindert doppelte Notizen bei wiederholtem mobilen Absenden
-- Migration 029 schafft mandantengetrennte Freigaben für VDE, DGUV, LWL und KNX
+- Migration 029 schafft mandantengetrennte Freigaben für optionale Elektro-Module
 - nur Administration und Geschäftsführung dürfen Spezialmodule aktivieren; jede Änderung besitzt Versionsschutz und unveränderliche Historie
 - deaktivierte oder noch nicht vollständig angebundene Module erzeugen keine leeren Menüpunkte
+- Migration 030 begrenzt die Modulplanung verbindlich auf VDE und DGUV; LWL und KNX gehören nicht zum Projektumfang
 
 ## Noch zu prüfen
 

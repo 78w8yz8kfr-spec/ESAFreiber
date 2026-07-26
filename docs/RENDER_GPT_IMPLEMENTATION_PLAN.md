@@ -13,7 +13,7 @@ Widersprüchen gilt die jeweils jüngere, konkretere Entscheidung.
   kann später für andere Gewerke verwendet werden.
 - Diese spätere Erweiterbarkeit darf den aktuellen Elektro-Arbeitsablauf nicht
   verwässern oder unnötig kompliziert machen.
-- VDE, DGUV, LWL und KNX sind optionale Module auf dem gemeinsamen Kern.
+- VDE und DGUV sind optionale Module auf dem gemeinsamen Kern.
 - Die bestehende VDE-Anwendung bleibt fachliche Quelle, bis ihre Funktionen
   kontrolliert in das Baustellenmodul übernommen werden.
 
@@ -89,10 +89,10 @@ dürfen keine parallelen Stammdatenbestände erzeugen.
    Baustellen und im freigegebenen Umfang erfassen. Das Backend prüft Firma,
    Rolle, Zuweisung und Datum.
 5. **Elektro-Spezialmodule**
-   VDE, DGUV, LWL und KNX werden einzeln aktivierbar und verwenden dieselben
+   VDE und DGUV werden einzeln aktivierbar und verwenden dieselben
    Kunden, Projekte, Baustellen, Dokumente und Mitarbeiter.
    Die mandantengetrennte Freigabe, Rollenprüfung und unveränderliche
-   Änderungshistorie sind mit V0.26.0 vorbereitet. Die sichtbare Anbindung
+   Änderungshistorie sind vorbereitet. Die sichtbare Anbindung
    beginnt kontrolliert mit der vorhandenen VDE-Anwendung.
 6. **Ausbildungsnachweise**
    Wochenberichte, Berufsschule, Urlaub/Krankheit, Erinnerungen, Unterschriften,

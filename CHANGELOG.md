@@ -4,6 +4,13 @@ Alle wesentlichen Änderungen an Schäfchen werden in dieser Datei dokumentiert.
 
 ## [Unreleased]
 
+### V0.26.1 – Modulumfang auf VDE und DGUV begrenzt
+
+- LWL und KNX vollständig aus API, Modulplanung und aktueller Produktdokumentation entfernt
+- nur VDE und DGUV bleiben als aktivierbare Elektro-Spezialmodule vorgesehen
+- neue Migration 030 verhindert auch auf Datenbankebene neue LWL- oder KNX-Freigaben
+- SQL-, API-, PostgreSQL- und Validierungstests an den verbindlichen Modulumfang angepasst
+
 ### V0.26.0 – Grundlage für optionale Elektro-Module
 
 - firmenbezogene Modulfreigaben für VDE, DGUV, LWL und KNX

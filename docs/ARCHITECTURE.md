@@ -27,7 +27,7 @@ steht in [`PRODUCT_VISION.md`](PRODUCT_VISION.md).
 Firma → Kunde → Kundenstandort → Projekt → Baustelle
 
 Planung, Zeiterfassung, Berichte, Dokumente und optionale Spezialmodule werden
-an diesen Kernpfad angebunden. VDE, LWL, DGUV und KNX sind Module, nicht der
+an diesen Kernpfad angebunden. VDE und DGUV sind Module, nicht der
 fachliche Kern.
 
 Die Verwaltungsoberfläche bildet diesen Pfad in drei getrennten Schreibschritten
@@ -92,7 +92,7 @@ Fachliche Datensätze werden deaktiviert oder archiviert, nicht hart gelöscht. 
 3. Kunden, Standorte, Projekte, Baustellen und Dokumente
 4. Aufgaben, Material sowie Montage- und Bautagesberichte
 5. Freigabe, Unterschrift und unveränderliche PDF-Versionierung
-6. Optionale Spezialmodule wie VDE, LWL, DGUV und KNX
+6. Optionale Spezialmodule VDE und DGUV
 7. KI, OCR und Sprache erst nach stabiler Kernfunktion
 
 ## Sprint 1: Benutzer und Rollen

@@ -85,16 +85,6 @@ const ELECTRICAL_MODULES = [
     key: "dguv",
     name: "DGUV",
     description: "Wiederkehrende Prüfungen elektrischer Betriebsmittel"
-  },
-  {
-    key: "lwl",
-    name: "LWL",
-    description: "Glasfaser-Messungen und Dokumentation"
-  },
-  {
-    key: "knx",
-    name: "KNX",
-    description: "Gebäudeautomation, Inbetriebnahme und Dokumentation"
   }
 ];
 
