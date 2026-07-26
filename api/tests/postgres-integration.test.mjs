@@ -1262,8 +1262,8 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   assert.equal(assignments.status, 200);
   assert.deepEqual((await assignments.json()).assignments, []);
 
-  const clockInAt = new Date(Date.now() - 2000).toISOString();
-  const clockOutAt = new Date(Date.now() - 1000).toISOString();
+  const clockInAt = new Date(Date.now() - 5000).toISOString();
+  const clockOutAt = new Date(Date.now() - 4000).toISOString();
   const clockIn = {
     clientEntryId: randomUUID(),
     entryType: "clock_in",
@@ -1297,10 +1297,36 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   });
   assert.equal(clockOut.status, 201, await clockOut.text());
 
+  const secondClockInAt = new Date(Date.now() - 2000).toISOString();
+  const secondClockOutAt = new Date(Date.now() - 1000).toISOString();
+  const secondClockIn = await fetch(`${baseUrl}/api/v1/time-entries`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: cookie },
+    body: JSON.stringify({
+      clientEntryId: randomUUID(),
+      entryType: "clock_in",
+      recordedAt: secondClockInAt,
+      clientCreatedAt: secondClockInAt
+    })
+  });
+  assert.equal(secondClockIn.status, 201, await secondClockIn.text());
+
+  const secondClockOut = await fetch(`${baseUrl}/api/v1/time-entries`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: cookie },
+    body: JSON.stringify({
+      clientEntryId: randomUUID(),
+      entryType: "clock_out",
+      recordedAt: secondClockOutAt,
+      clientCreatedAt: secondClockOutAt
+    })
+  });
+  assert.equal(secondClockOut.status, 201, await secondClockOut.text());
+
   const workDate = localDate(clockInAt, config.timeZone);
   const workDay = await fetch(`${baseUrl}/api/v1/work-days/${workDate}`, { headers: { Cookie: cookie } });
   assert.equal(workDay.status, 200);
-  assert.equal((await workDay.json()).workDay.entries.length, 2);
+  assert.equal((await workDay.json()).workDay.entries.length, 4);
 
   const logout = await fetch(`${baseUrl}/api/v1/session`, { method: "DELETE", headers: { Cookie: cookie } });
   assert.equal(logout.status, 200);

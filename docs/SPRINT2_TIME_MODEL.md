@@ -52,10 +52,12 @@ Freitag 360 Minuten und am Wochenende 0 Minuten. Beim Anlegen eines Arbeitstags
 wird das jeweilige Soll als unveränderlicher Tageswert übernommen.
 
 `work_days` ist die berechnete Tageszusammenfassung. Die derzeitige
-`calculation_version = 1` verwendet folgende Regeln:
+`calculation_version = 2` verwendet folgende Regeln:
 
 - ab 3 Stunden 30 Minuten Bruttozeit: 30 Minuten Pause,
 - ab 6 Stunden Bruttozeit: insgesamt 60 Minuten Pause,
+- ein weiterer Arbeitsbeginn nach Feierabend eröffnet einen neuen Arbeitsblock,
+- die Unterbrechung zwischen zwei Arbeitsblöcken zählt mindestens als Pause,
 - Arbeitszeit = Bruttozeit minus Pause,
 - Fahrtzeit zählt zur Arbeitszeit,
 - Mehrarbeit = Arbeitszeit oberhalb des individuellen Tagessolls.
@@ -72,11 +74,12 @@ Zeitbuchungen sind Ereignisse:
 2. `site_arrival` – auf der Baustelle angekommen,
 3. `site_departure` – Baustelle verlassen,
 4. optional `next_site` – verbindlich zur nächsten Baustelle wechseln,
-5. `clock_out` – Feierabend.
+5. `clock_out` – aktuellen Arbeitsblock beenden.
 
 Nach einer Abfahrt ist entweder „Nächste Baustelle“ oder direkt „Feierabend“
-möglich. Für Baustellenereignisse ist eine Baustelle Pflicht. Pro Arbeitstag
-existiert höchstens ein wirksamer Arbeitsbeginn und ein wirksamer Feierabend.
+möglich. Nach Feierabend kann derselbe Mitarbeiter den Arbeitstag erneut
+starten. Jeder Start und jedes Ende bleiben als eigener unveränderlicher
+Arbeitsblock erhalten. Für Baustellenereignisse ist eine Baustelle Pflicht.
 
 Die Felder `client_entry_id`, `client_created_at` und `source` unterstützen eine
 idempotente Offline-Synchronisation. Eine doppelt übertragene Client-ID erzeugt

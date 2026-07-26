@@ -1,7 +1,7 @@
 # Projektstatus
 
 Stand: 26.07.2026
-Technischer Stand: V0.23.0
+Technischer Stand: V0.24.0
 
 ## Abgeschlossen
 
@@ -131,6 +131,9 @@ Technischer Stand: V0.23.0
 - Mitarbeiter können mit Versionskonfliktschutz bearbeitet und einer anderen Betriebsrolle zugeordnet werden
 - Migration 026 unterscheidet manuelle Vorarbeiterplanung von automatischer Berichtsverantwortung
 - ist nur ein Mitarbeiter an einer Baustelle eingeplant, übernimmt er dort automatisch die Vorarbeiter- und Berichtsfunktion; bei einer Teamänderung wird die automatische Funktion wieder aufgehoben
+- Migration 027 erlaubt mehrere unveränderliche Arbeitsblöcke desselben Mitarbeiters am selben Tag
+- nach Feierabend kann der Arbeitstag direkt erneut gestartet werden; Unterbrechungen zwischen den Blöcken zählen nicht als Arbeitszeit
+- API, Offline-Synchronisation, Live-Stundenzettel und Tagesberechnung verwenden gemeinsam die Rechenregel Version 2
 
 ## Noch zu prüfen
 

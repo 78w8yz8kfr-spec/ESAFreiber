@@ -625,7 +625,7 @@
     elements.passwordState.textContent = demoMode ? "In der Demo inaktiv" : "Sicher verschlüsselt";
     elements.loginSubmit.classList.toggle("button--secondary", demoMode);
     elements.loginSubmit.classList.toggle("button--primary", !demoMode);
-    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.23.0 ${demoMode ? "Demo" : "Online"}`;
+    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.24.0 ${demoMode ? "Demo" : "Online"}`;
 
     if (demoMode) {
       elements.modeNoteText.replaceChildren();
@@ -2730,7 +2730,7 @@
     const latest = lastEvent();
     const siteIndex = currentSiteIndex();
 
-    if (!latest) addEntry("clock_in");
+    if (!latest || latest.type === "clock_out") addEntry("clock_in");
     else if (latest.type === "clock_in" && assignments.length === 0) addEntry("clock_out");
     else if (latest.type === "clock_in" || latest.type === "next_site") addEntry("site_arrival", siteIndex);
     else if (latest.type === "site_arrival") {
@@ -2783,12 +2783,12 @@
       setPrimaryAction("Auf Baustelle angekommen", "✓");
       elements.workdayTitle.textContent = "Zur nächsten Baustelle";
     } else {
-      setPrimaryAction("Arbeitstag abgeschlossen", "✓", true);
-      elements.workdayTitle.textContent = "Arbeitstag abgeschlossen";
+      setPrimaryAction("Arbeitstag erneut starten", "▶");
+      elements.workdayTitle.textContent = "Arbeitstag beendet";
     }
 
     elements.actionHint.textContent = latest.type === "clock_out"
-      ? (demoMode ? "Der lokale Stundenzettel ist vollständig" : "Der Stundenzettel ist sicher gespeichert")
+      ? (demoMode ? "Du kannst später einen weiteren Arbeitsblock starten" : "Gespeichert · ein weiterer Start ist jederzeit möglich")
       : (demoMode ? "Jede Buchung erhält eine eindeutige Demo-ID" : "Offline-fähig mit eindeutiger Client-ID");
   }
 
@@ -2817,7 +2817,7 @@
     else if (latest?.type === "site_arrival") status = `Vor Ort · ${status}`;
     else if (latest?.type === "site_departure") status = `Einsatz beendet · ${status}`;
     else if (latest?.type === "next_site") status = `Nächster Einsatz · ${status}`;
-    else if (latest?.type === "clock_out") status = "Alle Einsätze für heute abgeschlossen";
+    else if (latest?.type === "clock_out") status = "Arbeitsblock beendet";
 
     elements.assignmentOrder.textContent = `${siteIndex + 1} von ${assignments.length}`;
     elements.assignmentTitle.textContent = assignment.constructionSite.name;
@@ -2835,11 +2835,27 @@
   }
 
   function calculatedTimes() {
+    const now = new Date();
     const clockIn = state.events.find((entry) => entry.type === "clock_in");
-    const clockOut = state.events.find((entry) => entry.type === "clock_out");
-    const endTime = clockOut ? new Date(clockOut.recordedAt) : new Date();
+    const latest = lastEvent();
+    const endTime = latest?.type === "clock_out" ? new Date(latest.recordedAt) : now;
     const gross = clockIn ? durationMinutes(endTime - new Date(clockIn.recordedAt)) : 0;
-    const pause = gross >= 360 ? 60 : gross >= 210 ? 30 : 0;
+    let recordedWork = 0;
+    let activeStart = null;
+
+    state.events.forEach((entry) => {
+      if (entry.type === "clock_in") {
+        activeStart = new Date(entry.recordedAt);
+      } else if (entry.type === "clock_out" && activeStart) {
+        recordedWork += durationMinutes(new Date(entry.recordedAt) - activeStart);
+        activeStart = null;
+      }
+    });
+    if (activeStart) recordedWork += durationMinutes(now - activeStart);
+
+    const explicitPause = Math.max(gross - recordedWork, 0);
+    const requiredPause = gross >= 360 ? 60 : gross >= 210 ? 30 : 0;
+    const pause = Math.max(explicitPause, requiredPause);
     const work = Math.max(gross - pause, 0);
     let travel = 0;
 

@@ -482,7 +482,7 @@ test("lokales Arbeitsdatum und Schrittfolge sind eindeutig", () => {
   assert.equal(localDate("2026-01-01T00:30:00Z", "Europe/Berlin"), "2026-01-01");
   assert.deepEqual(expectedNextTypes(null), ["clock_in"]);
   assert.deepEqual(expectedNextTypes("site_departure"), ["next_site", "clock_out"]);
-  assert.deepEqual(expectedNextTypes("clock_out"), []);
+  assert.deepEqual(expectedNextTypes("clock_out"), ["clock_in"]);
   assert.equal(validateWorkDate("2026-07-17"), "2026-07-17");
   assert.throws(() => validateWorkDate("2026-02-30"), /ungültig/);
 });

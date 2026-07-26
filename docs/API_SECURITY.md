@@ -1,7 +1,7 @@
 # API-Sicherheitsgrenze
 
 Stand: 26.07.2026
-Technischer Stand: V0.23.0
+Technischer Stand: V0.24.0
 
 Die API ist die einzige erlaubte Verbindung zwischen PWA und PostgreSQL. Die
 öffentliche GitHub-Pages-Adresse bleibt eine lokale Demo. Im Online-Betrieb
@@ -111,6 +111,9 @@ freigegebene Baustelle. Der Server sperrt den jeweiligen Mitarbeiter-Tag
 transaktional, prüft Zeitreihenfolge und nächsten logischen Schritt und legt den
 Arbeitstag bei Bedarf an. Eine bereits identisch gespeicherte Client-UUID ist
 erfolgreich idempotent; abweichende Daten führen zu `409 Conflict`.
+Nach einem wirksamen Feierabend ist ausschließlich ein neuer Arbeitsbeginn
+zulässig. Dadurch entstehen mehrere getrennte, historisch erhaltene
+Arbeitsblöcke desselben Tages ohne überlappende Buchungen.
 
 Die Verwaltungsendpunkte prüfen zusätzlich die aktiven Rollen aus der
 serverseitig aufgelösten Sitzung. Administrator, Geschäftsführer,

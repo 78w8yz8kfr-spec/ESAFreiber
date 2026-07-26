@@ -4,6 +4,13 @@ Alle wesentlichen Änderungen an Schäfchen werden in dieser Datei dokumentiert.
 
 ## [Unreleased]
 
+### V0.24.0 – Mehrere Arbeitsblöcke pro Tag
+
+- nach Feierabend kann derselbe Arbeitstag mit einer großen Schaltfläche erneut gestartet werden
+- jeder Arbeitsbeginn und jeder Feierabend bleiben als eigener unveränderlicher Zeitblock erhalten
+- Unterbrechungen zwischen zwei Arbeitsblöcken zählen als Pause und nicht als Arbeitszeit
+- Datenbank-Rechenregel Version 2 sowie erweiterte SQL-, API-, PostgreSQL- und PWA-Tests
+
 ### V0.23.0 – Mitarbeiter, Vorarbeiter und strukturierte Berichte
 
 - Mitarbeiterstammdaten und Betriebsrollen lassen sich geschützt bearbeiten; parallele Änderungen werden über den Versionsstand erkannt

@@ -120,20 +120,6 @@ BEGIN
     BEGIN
         INSERT INTO time_entries (
             company_id, user_id, work_day_id, entry_type, recorded_at,
-            client_entry_id, client_created_at, source, entered_by_user_id
-        ) VALUES (
-            target_company_id, employee_id, work_day_id, 'clock_in',
-            TIMESTAMPTZ '2026-07-17 08:00:00+02', gen_random_uuid(),
-            CURRENT_TIMESTAMP, 'employee', employee_id
-        );
-        RAISE EXCEPTION USING ERRCODE = 'ZXC02', MESSAGE = 'Zweiter Arbeitsbeginn wurde akzeptiert';
-    EXCEPTION
-        WHEN unique_violation THEN NULL;
-    END;
-
-    BEGIN
-        INSERT INTO time_entries (
-            company_id, user_id, work_day_id, entry_type, recorded_at,
             client_entry_id, client_created_at, source, entered_by_user_id,
             original_entry_id
         ) VALUES (

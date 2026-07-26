@@ -656,6 +656,6 @@ export function expectedNextTypes(previousType) {
     site_arrival: ["site_departure"],
     site_departure: ["next_site", "clock_out"],
     next_site: ["site_arrival"],
-    clock_out: []
+    clock_out: ["clock_in"]
   }[previousType ?? "empty"] ?? [];
 }
