@@ -122,11 +122,19 @@ assert.doesNotMatch(html, /<section id="assignment-import-panel"[^>]*hidden>/);
 assert.doesNotMatch(html, /<section id="site-import-panel"[^>]*hidden>/);
 assert.doesNotMatch(html, /id="assignment-import-body" class="inline-import__body" hidden/);
 assert.doesNotMatch(html, /id="site-import-body" class="inline-import__body" hidden/);
-assert.match(html, /styles\.css\?v=0\.21\.0/);
-assert.match(html, /app\.js\?v=0\.21\.0/);
-assert.match(html, /version\.js\?v=0\.21\.0/);
+assert.match(html, /styles\.css\?v=0\.22\.0/);
+assert.match(html, /app\.js\?v=0\.22\.0/);
+assert.match(html, /version\.js\?v=0\.22\.0/);
 assert.match(html, /id="mobile-report-card"/);
 assert.match(html, /id="mobile-report-form"/);
+assert.match(html, /id="employee-site-workspace"/);
+assert.match(html, /id="employee-site-team"/);
+assert.match(html, /id="employee-site-tasks"/);
+assert.match(html, /id="employee-site-reports"/);
+assert.match(html, /id="employee-site-documents"/);
+assert.match(html, /id="employee-site-photos"/);
+assert.match(html, /id="employee-site-photo-input"[\s\S]*capture="environment"/);
+assert.match(html, /id="employee-site-materials"/);
 assert.match(html, /id="assignment-report-responsible"/);
 assert.match(html, /id="assignment-edit-report-responsible"/);
 assert.match(html, /id="site-report-finalize-form"/);
@@ -165,6 +173,9 @@ assert.match(styles, /\.document-compact-list/);
 assert.match(styles, /\.site-work-module/);
 assert.match(styles, /\.module-action--primary/);
 assert.match(styles, /\.site-module-list/);
+assert.match(styles, /\.employee-site-workspace/);
+assert.match(styles, /\.employee-site-module/);
+assert.match(styles, /\.employee-site-photo-grid/);
 assert.match(styles, /\.company-context__mark--logo/);
 assert.match(styles, /\.company-brand-line__mark--logo/);
 assert.match(styles, /--brand: #e30613/);
@@ -194,6 +205,9 @@ assert.match(app, /\.\/api\/v1\/admin\/site-tasks/);
 assert.match(app, /\.\/api\/v1\/admin\/site-materials/);
 assert.match(app, /\.\/api\/v1\/admin\/site-reports/);
 assert.match(app, /\.\/api\/v1\/site-reports/);
+assert.match(app, /\.\/api\/v1\/construction-sites\//);
+assert.match(app, /openEmployeeSiteWorkspace/);
+assert.match(app, /uploadEmployeeSitePhoto/);
 assert.match(app, /reportResponsible/);
 assert.match(app, /window\.SpeechRecognition \|\| window\.webkitSpeechRecognition/);
 assert.match(app, /function setCompanyMark/);
@@ -254,9 +268,9 @@ for (const asset of [
 ]) {
   assert.ok(worker.includes(`"${asset}"`), `${asset} fehlt im App-Shell-Cache`);
 }
-assert.ok(worker.includes('"./styles.css?v=0.21.0"'));
-assert.ok(worker.includes('"./app.js?v=0.21.0"'));
-assert.ok(worker.includes('"./version.js?v=0.21.0"'));
+assert.ok(worker.includes('"./styles.css?v=0.22.0"'));
+assert.ok(worker.includes('"./app.js?v=0.22.0"'));
+assert.ok(worker.includes('"./version.js?v=0.22.0"'));
 assert.match(
   styles,
   /\.login-form input,\s*\.admin-form input,\s*\.admin-form select\s*\{\s*height: 52px;/,

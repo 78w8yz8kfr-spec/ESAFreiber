@@ -1,6 +1,6 @@
 # Schäfchen Online bereitstellen
 
-Technischer Stand: V0.21.0
+Technischer Stand: V0.22.0
 
 Das Firmenlogo von Schaaf Elektro stammt unverändert aus dem bestehenden
 VDE-Prüfprotokoll. Es wird im Login und App-Kopfbereich getrennt vom
@@ -24,6 +24,12 @@ Die Baustellenliste kann nach Name, Kunde, Projekt und Ort durchsucht sowie nach
 Status gefiltert werden. Über **Öffnen → Bearbeiten** lassen sich Auftrag,
 Adresse und Status pflegen. Abschluss oder Archivierung sind nur möglich, wenn
 keine aktuellen oder zukünftigen Einsätze mehr an der Baustelle hängen.
+
+Bei Monteuren und Vorarbeitern öffnet **Details** am heutigen Einsatz die
+zugewiesene Baustelle mit Arbeitsauftrag, Navigation, Team, Aufgaben, Berichten,
+Dokumenten, Fotos und Material. **Foto aufnehmen** verwendet direkt die
+Handykamera. Fremde oder nicht für diesen Tag freigegebene Baustellen werden
+serverseitig abgewiesen.
 
 Kunden und Projekte besitzen im Bereich **Baustellen** jeweils eine dauerhaft
 sichtbare, durchsuchbare Verwaltung. Die Anlegeformulare bleiben kompakt

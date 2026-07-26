@@ -79,6 +79,29 @@
     mobileReportDetails: document.querySelector("#mobile-report-details"),
     mobileReportSubmit: document.querySelector("#mobile-report-submit"),
     mobileReportMessage: document.querySelector("#mobile-report-message"),
+    employeeSiteWorkspace: document.querySelector("#employee-site-workspace"),
+    employeeSiteBack: document.querySelector("#employee-site-back"),
+    employeeSiteTitle: document.querySelector("#employee-site-title"),
+    employeeSiteMeta: document.querySelector("#employee-site-meta"),
+    employeeSiteStatus: document.querySelector("#employee-site-status"),
+    employeeSiteOrder: document.querySelector("#employee-site-order"),
+    employeeSiteContext: document.querySelector("#employee-site-context"),
+    employeeSiteNavigation: document.querySelector("#employee-site-navigation"),
+    employeeSiteTeamCount: document.querySelector("#employee-site-team-count"),
+    employeeSiteTeam: document.querySelector("#employee-site-team"),
+    employeeSiteTaskCount: document.querySelector("#employee-site-task-count"),
+    employeeSiteTasks: document.querySelector("#employee-site-tasks"),
+    employeeSiteReportCount: document.querySelector("#employee-site-report-count"),
+    employeeSiteReports: document.querySelector("#employee-site-reports"),
+    employeeSiteDocumentCount: document.querySelector("#employee-site-document-count"),
+    employeeSiteDocuments: document.querySelector("#employee-site-documents"),
+    employeeSitePhotoCount: document.querySelector("#employee-site-photo-count"),
+    employeeSitePhotoAdd: document.querySelector("#employee-site-photo-add"),
+    employeeSitePhotoInput: document.querySelector("#employee-site-photo-input"),
+    employeeSitePhotoMessage: document.querySelector("#employee-site-photo-message"),
+    employeeSitePhotos: document.querySelector("#employee-site-photos"),
+    employeeSiteMaterialCount: document.querySelector("#employee-site-material-count"),
+    employeeSiteMaterials: document.querySelector("#employee-site-materials"),
     connectionState: document.querySelector("#connection-state"),
     todayLabel: document.querySelector("#today-label"),
     weekStrip: document.querySelector("#week-strip"),
@@ -407,8 +430,10 @@
   let finalizingReportId = null;
   let speechRecognition = null;
   let cachedUserId = null;
+  let employeeSiteState = null;
   let assignments = demoMode ? demoAssignments : [];
   let state = loadState();
+  employeeSiteState = state.siteWorkspace || null;
 
   function createSignaturePad(canvas, clearButton) {
     const context = canvas.getContext("2d");
@@ -485,7 +510,13 @@
   }
 
   function initialState() {
-    return { version: 1, workDate: localDateKey(), events: [], reports: [] };
+    return {
+      version: 1,
+      workDate: localDateKey(),
+      events: [],
+      reports: [],
+      siteWorkspace: null
+    };
   }
 
   function loadState() {
@@ -501,7 +532,8 @@
           version: 1,
           workDate: saved.workDate,
           events: saved.events,
-          reports: Array.isArray(saved.reports) ? saved.reports : []
+          reports: Array.isArray(saved.reports) ? saved.reports : [],
+          siteWorkspace: saved.siteWorkspace || null
         };
       }
     } catch {
@@ -580,7 +612,7 @@
     elements.passwordState.textContent = demoMode ? "In der Demo inaktiv" : "Sicher verschlüsselt";
     elements.loginSubmit.classList.toggle("button--secondary", demoMode);
     elements.loginSubmit.classList.toggle("button--primary", !demoMode);
-    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.21.0 ${demoMode ? "Demo" : "Online"}`;
+    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.22.0 ${demoMode ? "Demo" : "Online"}`;
 
     if (demoMode) {
       elements.modeNoteText.replaceChildren();
@@ -2144,6 +2176,264 @@
     }
   }
 
+  function employeeRoleLabel(roles = []) {
+    if (roles.includes("foreman")) return "Vorarbeiter";
+    if (roles.some((role) => ["admin", "managing_director", "dispatch_office", "project_manager"].includes(role))) {
+      return "Planung";
+    }
+    return "Monteur";
+  }
+
+  function appendEmployeeSiteEmpty(list, message) {
+    const item = document.createElement("li");
+    item.className = "employee-site-list__empty";
+    item.textContent = message;
+    list.append(item);
+  }
+
+  function appendEmployeeSiteItem(list, titleText, metaText, badgeText = "") {
+    const item = document.createElement("li");
+    const content = document.createElement("div");
+    const title = document.createElement("strong");
+    const meta = document.createElement("span");
+    title.textContent = titleText;
+    meta.textContent = metaText;
+    content.append(title, meta);
+    item.append(content);
+    if (badgeText) {
+      const badge = document.createElement("small");
+      badge.textContent = badgeText;
+      item.append(badge);
+    }
+    list.append(item);
+  }
+
+  function employeeSiteContentUrl(documentItem) {
+    if (!employeeSiteState) return "#";
+    const siteId = encodeURIComponent(employeeSiteState.site.id);
+    const documentId = encodeURIComponent(documentItem.id);
+    const date = encodeURIComponent(employeeSiteState.date);
+    return `./api/v1/construction-sites/${siteId}/documents/${documentId}/content?date=${date}`;
+  }
+
+  function employeeSiteDocumentLink(documentItem) {
+    const link = document.createElement("a");
+    link.className = "text-button";
+    link.href = employeeSiteContentUrl(documentItem);
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = "Öffnen";
+    return link;
+  }
+
+  function renderEmployeeSiteWorkspace(dashboard) {
+    employeeSiteState = dashboard;
+    state.siteWorkspace = dashboard;
+    saveState();
+
+    const { site } = dashboard;
+    const address = [
+      `${site.address.street || ""} ${site.address.houseNumber || ""}`.trim(),
+      `${site.address.postalCode || ""} ${site.address.city || ""}`.trim()
+    ].filter(Boolean).join(", ");
+    elements.employeeSiteTitle.textContent = site.name;
+    elements.employeeSiteMeta.textContent = [site.number, address].filter(Boolean).join(" · ");
+    elements.employeeSiteStatus.textContent = siteStatusLabel(site.status);
+    elements.employeeSiteStatus.className = `site-status site-status--${siteStatusGroup(site.status)}`;
+    elements.employeeSiteOrder.textContent = site.shortText || "Noch kein Arbeitsauftrag hinterlegt";
+    elements.employeeSiteContext.textContent = [site.customerName, site.projectName].filter(Boolean).join(" · ");
+    elements.employeeSiteNavigation.href =
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+
+    elements.employeeSiteTeamCount.textContent = String(dashboard.team.length);
+    elements.employeeSiteTeam.replaceChildren();
+    if (dashboard.team.length === 0) {
+      appendEmployeeSiteEmpty(elements.employeeSiteTeam, "Für heute ist noch kein Team eingetragen.");
+    } else {
+      dashboard.team.forEach((member) => {
+        appendEmployeeSiteItem(
+          elements.employeeSiteTeam,
+          member.name,
+          member.reportResponsible ? "Erstellt heute den Baustellenbericht" : "Heute eingeplant",
+          member.reportResponsible ? "Vorarbeiter" : employeeRoleLabel(member.roles)
+        );
+      });
+    }
+
+    elements.employeeSiteTaskCount.textContent = String(dashboard.tasks.length);
+    elements.employeeSiteTasks.replaceChildren();
+    if (dashboard.tasks.length === 0) {
+      appendEmployeeSiteEmpty(elements.employeeSiteTasks, "Keine offene Aufgabe für dich.");
+    } else {
+      dashboard.tasks.forEach((task) => {
+        const due = task.dueDate
+          ? `Fällig ${new Intl.DateTimeFormat("de-DE").format(new Date(`${task.dueDate}T00:00:00`))}`
+          : "Ohne Fälligkeit";
+        appendEmployeeSiteItem(
+          elements.employeeSiteTasks,
+          task.title,
+          [task.details, task.assignedUserName, due].filter(Boolean).join(" · "),
+          `${taskPriorityLabel(task.priority)} · ${taskStatusLabel(task.status)}`
+        );
+      });
+    }
+
+    elements.employeeSiteReportCount.textContent = String(dashboard.reports.length);
+    elements.employeeSiteReports.replaceChildren();
+    if (dashboard.reports.length === 0) {
+      appendEmployeeSiteEmpty(elements.employeeSiteReports, "Noch kein Bericht für diese Baustelle.");
+    } else {
+      dashboard.reports.forEach((report) => {
+        appendEmployeeSiteItem(
+          elements.employeeSiteReports,
+          report.summary,
+          [report.number, report.workDate, report.authorName].filter(Boolean).join(" · "),
+          `${reportTypeLabel(report.reportType)} · ${reportStatusLabel(report.status)}`
+        );
+      });
+    }
+
+    const photos = dashboard.documents.filter((documentItem) => documentItem.category === "photo");
+    const documents = dashboard.documents.filter((documentItem) => documentItem.category !== "photo");
+    elements.employeeSiteDocumentCount.textContent = String(documents.length);
+    elements.employeeSiteDocuments.replaceChildren();
+    if (documents.length === 0) {
+      appendEmployeeSiteEmpty(elements.employeeSiteDocuments, "Noch kein Dokument für diese Baustelle.");
+    } else {
+      documents.forEach((documentItem) => {
+        const item = document.createElement("li");
+        const content = document.createElement("div");
+        const title = document.createElement("strong");
+        const meta = document.createElement("span");
+        title.textContent = documentItem.title;
+        meta.textContent = `${documentCategoryLabel(documentItem.category)} · ${formatFileSize(documentItem.sizeBytes)}`;
+        content.append(title, meta);
+        item.append(content, employeeSiteDocumentLink(documentItem));
+        elements.employeeSiteDocuments.append(item);
+      });
+    }
+
+    elements.employeeSitePhotoCount.textContent = String(photos.length);
+    elements.employeeSitePhotos.replaceChildren();
+    if (photos.length === 0) {
+      appendEmployeeSiteEmpty(elements.employeeSitePhotos, "Noch kein Baustellenfoto gespeichert.");
+    } else {
+      photos.forEach((photo) => {
+        const item = document.createElement("li");
+        const link = employeeSiteDocumentLink(photo);
+        const image = document.createElement("img");
+        const caption = document.createElement("span");
+        link.className = "employee-site-photo";
+        image.src = employeeSiteContentUrl(photo);
+        image.alt = photo.title;
+        image.loading = "lazy";
+        caption.textContent = photo.title;
+        link.replaceChildren(image, caption);
+        item.append(link);
+        elements.employeeSitePhotos.append(item);
+      });
+    }
+
+    elements.employeeSiteMaterialCount.textContent = String(dashboard.materials.length);
+    elements.employeeSiteMaterials.replaceChildren();
+    if (dashboard.materials.length === 0) {
+      appendEmployeeSiteEmpty(elements.employeeSiteMaterials, "Noch kein Material eingetragen.");
+    } else {
+      dashboard.materials.forEach((material) => {
+        appendEmployeeSiteItem(
+          elements.employeeSiteMaterials,
+          material.itemName,
+          [material.note, `${material.quantity.toLocaleString("de-DE")} ${material.unit}`]
+            .filter(Boolean)
+            .join(" · "),
+          materialStatusLabel(material.status)
+        );
+      });
+    }
+
+    elements.employeeSitePhotoAdd.disabled = !navigator.onLine;
+    elements.employeeSitePhotoMessage.textContent = navigator.onLine
+      ? ""
+      : "Fotos können wieder hinzugefügt werden, sobald eine Verbindung besteht.";
+  }
+
+  async function openEmployeeSiteWorkspace() {
+    const assignment = assignments[currentSiteIndex()];
+    if (!assignment?.constructionSite?.id || demoMode) {
+      showToast(demoMode
+        ? "Die Baustellenakte ist in der Online-Version mit einem echten Einsatz verfügbar."
+        : "Für heute ist keine Baustelle freigegeben.");
+      return;
+    }
+
+    const cached = employeeSiteState
+      && employeeSiteState.site?.id === assignment.constructionSite.id
+      && employeeSiteState.date === state.workDate;
+    if (!navigator.onLine) {
+      if (!cached) {
+        showToast("Die Baustellenakte wurde auf diesem Gerät noch nicht geladen.");
+        return;
+      }
+      renderEmployeeSiteWorkspace(employeeSiteState);
+      showDashboardPane("site");
+      return;
+    }
+
+    elements.assignmentDetails.disabled = true;
+    elements.assignmentDetails.textContent = "Lädt …";
+    try {
+      const body = await requestJson(
+        `./api/v1/construction-sites/${encodeURIComponent(assignment.constructionSite.id)}/dashboard?date=${encodeURIComponent(state.workDate)}`
+      );
+      renderEmployeeSiteWorkspace(body.dashboard);
+      showDashboardPane("site");
+    } catch (error) {
+      if (error.status === 401) showLogin();
+      else showToast(error.message);
+    } finally {
+      elements.assignmentDetails.disabled = false;
+      elements.assignmentDetails.textContent = "Details";
+    }
+  }
+
+  async function uploadEmployeeSitePhoto(file) {
+    if (!employeeSiteState || !isDeliveryNotePhoto(file)) {
+      elements.employeeSitePhotoMessage.textContent =
+        "Bitte ein JPG-, PNG- oder WebP-Foto mit höchstens 5 MB auswählen.";
+      return;
+    }
+    elements.employeeSitePhotoAdd.disabled = true;
+    elements.employeeSitePhotoMessage.textContent = "Foto wird sicher gespeichert …";
+    try {
+      await requestJson(
+        `./api/v1/construction-sites/${encodeURIComponent(employeeSiteState.site.id)}/photos?date=${encodeURIComponent(employeeSiteState.date)}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            title: `Baustellenfoto · ${new Intl.DateTimeFormat("de-DE", {
+              dateStyle: "short",
+              timeStyle: "short"
+            }).format(new Date())}`,
+            fileName: file.name,
+            mimeType: documentMimeType(file),
+            contentBase64: arrayBufferToBase64(await file.arrayBuffer())
+          })
+        }
+      );
+      const body = await requestJson(
+        `./api/v1/construction-sites/${encodeURIComponent(employeeSiteState.site.id)}/dashboard?date=${encodeURIComponent(employeeSiteState.date)}`
+      );
+      renderEmployeeSiteWorkspace(body.dashboard);
+      showToast("Baustellenfoto gespeichert.");
+    } catch (error) {
+      if (error.status === 401) showLogin();
+      else elements.employeeSitePhotoMessage.textContent = error.message;
+    } finally {
+      elements.employeeSitePhotoAdd.disabled = !navigator.onLine;
+      elements.employeeSitePhotoInput.value = "";
+    }
+  }
+
   function currentSiteIndex() {
     if (assignments.length === 0) return 0;
     return Math.min(
@@ -2529,6 +2819,13 @@
     elements.connectionState.classList.toggle("connection-state--offline", !online || pendingCount > 0);
     const label = !online ? "Offline" : syncing ? "Sync …" : pendingCount > 0 ? `${pendingCount} offen` : "Online";
     elements.connectionState.querySelector("span").textContent = label;
+    if (!elements.employeeSiteWorkspace.hidden) {
+      elements.employeeSitePhotoAdd.disabled = !online;
+      if (!online) {
+        elements.employeeSitePhotoMessage.textContent =
+          "Fotos können wieder hinzugefügt werden, sobald eine Verbindung besteht.";
+      }
+    }
   }
 
   function activateNavigation(activeButton) {
@@ -2575,6 +2872,7 @@
     activateNavigation(activeButton);
     const title = {
       week: "Woche",
+      site: "Baustelle",
       assignments: "Einsätze",
       sites: "Baustellen",
       more: "Mehr"
@@ -2615,7 +2913,8 @@
         workDate: date,
         events: [...persisted, ...pending.filter((entry) => !knownIds.has(entry.clientEntryId))]
           .sort((left, right) => new Date(left.recordedAt) - new Date(right.recordedAt)),
-        reports: localReports
+        reports: localReports,
+        siteWorkspace: employeeSiteState
       };
       saveState();
       render();
@@ -2630,6 +2929,7 @@
       state = initialState();
       assignments = [];
       adminState = null;
+      employeeSiteState = null;
     }
     session = sessionView;
     cachedUserId = session.user.id;
@@ -3675,6 +3975,7 @@
       await requestJson("./api/v1/session", { method: "DELETE" });
       session = null;
       adminState = null;
+      employeeSiteState = null;
       cachedUserId = null;
       assignments = [];
       state = initialState();
@@ -3686,10 +3987,18 @@
   });
   elements.primaryAction.addEventListener("click", handlePrimaryAction);
   elements.secondaryAction.addEventListener("click", () => addEntry("clock_out"));
-  elements.assignmentDetails.addEventListener("click", () => {
-    showToast(assignments.length
-      ? `${assignments.length} Einsatz${assignments.length === 1 ? "" : "e"} · Reihenfolge ist verbindlich.`
-      : "Für heute ist noch keine Baustelle freigegeben.");
+  elements.assignmentDetails.addEventListener("click", openEmployeeSiteWorkspace);
+  elements.employeeSiteBack.addEventListener("click", () => showDashboardPane("start"));
+  elements.employeeSitePhotoAdd.addEventListener("click", () => {
+    if (!navigator.onLine) {
+      showToast("Für das Foto ist momentan eine Verbindung erforderlich.");
+      return;
+    }
+    elements.employeeSitePhotoInput.click();
+  });
+  elements.employeeSitePhotoInput.addEventListener("change", () => {
+    const [file] = elements.employeeSitePhotoInput.files || [];
+    if (file) void uploadEmployeeSitePhoto(file);
   });
   elements.showWeek.addEventListener("click", () => {
     showDashboardPane("week");

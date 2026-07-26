@@ -4,6 +4,16 @@ Alle wesentlichen Änderungen an Schäfchen werden in dieser Datei dokumentiert.
 
 ## [Unreleased]
 
+### V0.22.0 – Mobile Baustellenakte
+
+- der bisherige Details-Hinweis des Tageseinsatzes öffnet jetzt die echte Baustellenakte
+- übersichtliche Themenkarten für Arbeitsauftrag, Mitarbeiter, Aufgaben, Berichte, Dokumente, Fotos und Material
+- Monteure und Vorarbeiter dürfen ausschließlich am betreffenden Tag zugewiesene Baustellen öffnen; Planungsrollen behalten den vollständigen Zugriff
+- Aufgaben werden für Monteure auf eigene und allgemeine Baustellenaufgaben begrenzt, während Vorarbeiter das gesamte Baustellenteam sehen
+- Baustellenfotos können direkt aufgenommen werden und landen ohne Kopie im zentralen Dokumentenbestand
+- die zuletzt geladene Baustellenübersicht bleibt als kleine Offline-Ansicht auf dem Gerät verfügbar
+- PostgreSQL-Integrationstest für berechtigten und verbotenen Zugriff, Rollenunterschiede, Foto-Upload und geschützten Dateiabruf
+
 ### V0.21.0 – Mobile Vorarbeiterberichte
 
 - tägliche Vorarbeiter- und Berichtsverantwortung direkt in der Einsatzplanung

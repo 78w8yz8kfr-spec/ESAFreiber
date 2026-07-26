@@ -1,7 +1,7 @@
 # Projektstatus
 
-Stand: 22.07.2026
-Technischer Stand: V0.21.0
+Stand: 26.07.2026
+Technischer Stand: V0.22.0
 
 ## Abgeschlossen
 
@@ -120,6 +120,12 @@ Technischer Stand: V0.21.0
 - beim Verlassen einer berichtspflichtigen Baustelle fordert Schäfchen zuerst den Bericht an und blockiert auch serverseitig eine verfrühte Abfahrtsbuchung
 - mobile Berichte und Zeitbuchungen bleiben offline-fähig; der Bericht wird mit eigener Idempotenz-ID vor der Abfahrtsbuchung synchronisiert
 - Einsatzplanung und Wochenübersicht zeigen die Vorarbeiter-/Berichtspflicht sichtbar und erlauben begründete Änderungen
+- der Details-Knopf des heutigen Einsatzes öffnet eine echte mobile Baustellenakte statt eines Hinweises
+- Arbeitsauftrag, Navigation, Mitarbeiter, Aufgaben, Berichte, Dokumente, Fotos und Material sind als getrennte ruhige Themenkarten sichtbar
+- Monteure und Vorarbeiter dürfen nur eine für den betreffenden Tag freigegebene Baustelle öffnen; Planungsrollen behalten mandantenweit Zugriff
+- Monteure sehen eigene und allgemeine Aufgaben, Vorarbeiter zusätzlich das vollständige Baustellenteam und alle Baustelleninhalte
+- direkter Kamera-Upload für Baustellenfotos mit zentraler Ein-Dokument-Speicherung und geschütztem Abruf
+- zuletzt geladene Baustellenmetadaten bleiben für die Ansicht ohne Verbindung auf dem Gerät verfügbar
 
 ## Noch zu prüfen
 
@@ -131,12 +137,12 @@ Technischer Stand: V0.21.0
 
 ## Nächster Entwicklungsschritt
 
-Nach der technischen Online-Anbindung folgt die kontrollierte Betriebsaufnahme:
+Die mobile Baustellenakte wird als Nächstes um echte Arbeitsaktionen ergänzt:
 
-- dauerhafte Datenbank, Backup-Plan und Überwachung festlegen
-- Objektspeicher-Anbindung für größere Dokumentmengen und betriebliche Aufbewahrungsregeln
-- allgemeine Logo-Verwaltung als geschütztes Mandantendokument; bis dahin bleibt bei Firmen ohne Logo der Initial-Platzhalter
-- begrenzte mobile Berichtsrechte für Vorarbeiter und zugewiesene Monteure
+- eigene Aufgaben mobil beginnen und abschließen
+- strukturierte Angaben in Montage- und Bautagesberichten
+- eigene Baustellennotizen ohne Aktivitätschronik
+- danach dauerhafte Datenbank, Backup-Plan, Überwachung und Objektspeicher für den Betriebsstart festlegen
 
 Die öffentliche GitHub-Pages-PWA bleibt eindeutig als lokale Demo
 gekennzeichnet; die echte Anmeldung läuft ausschließlich auf der gemeinsamen

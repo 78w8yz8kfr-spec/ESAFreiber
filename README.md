@@ -37,6 +37,8 @@ Aktuell enthalten:
 - vereinfachter Login mit Personalnummer und Passwort; die Firmennummer bleibt nach der Einrichtung im Hintergrund
 - getrenntes Live-, Wochen- und Verwaltungsdashboard
 - gegliedertes Baustellen-Dashboard ohne Aktivitätschronik
+- mobile Baustellenakte für zugewiesene Monteure und Vorarbeiter mit Auftrag, Navigation, Team, Aufgaben, Berichten, Dokumenten, Fotos und Material
+- direkter, berechtigungsgeprüfter Kamera-Upload in den zentralen Dokumentenbestand
 - mobile Verwaltung für Mitarbeiter, Baustellen und die Wochenplanung Montag bis Freitag
 - sicherer Excel-Wochenplanimport mit Vorschau, eindeutiger Zuordnung und Schutz bestehender Einsätze
 - Excel-Baustellenlistenimport mit Vorlage, Zeilenprüfung und Wiederverwendung vorhandener Kunden

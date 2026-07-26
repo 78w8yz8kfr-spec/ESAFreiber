@@ -528,6 +528,20 @@ function siteReportDto(row) {
   };
 }
 
+function siteWorkspaceDocumentDto(row) {
+  return {
+    id: row.id,
+    number: row.document_number,
+    title: row.title,
+    category: row.category,
+    fileName: row.original_file_name,
+    mimeType: row.mime_type,
+    sizeBytes: Number(row.size_bytes),
+    createdAt: new Date(row.created_at).toISOString(),
+    uploadedByName: row.uploaded_by_name
+  };
+}
+
 function mondayFor(date) {
   const value = new Date(`${date}T00:00:00Z`);
   const weekday = value.getUTCDay() || 7;
@@ -777,6 +791,189 @@ async function adminOverview(client, context, date) {
   };
 }
 
+async function requireSiteWorkspaceAccess(client, context, constructionSiteId, date) {
+  const roles = await activeRoleKeys(client, context);
+  const canManage = [...roles].some((role) => PLANNER_ROLES.has(role));
+  const canLead = canManage || roles.has("foreman");
+  const assignment = await client.query(
+    `SELECT id, report_responsible
+     FROM site_assignments
+     WHERE company_id = $1
+       AND user_id = $2
+       AND construction_site_id = $3
+       AND work_date = $4
+       AND status IN ('released', 'completed')
+     ORDER BY report_responsible DESC, sequence_number
+     LIMIT 1`,
+    [context.companyId, context.userId, constructionSiteId, date]
+  );
+
+  if (!canManage && assignment.rowCount !== 1) {
+    throw new InputError(
+      "Diese Baustelle ist dir für den gewählten Tag nicht zugewiesen.",
+      403,
+      "site_not_assigned"
+    );
+  }
+
+  return {
+    roles,
+    canManage,
+    canLead,
+    assignmentId: assignment.rows[0]?.id || null,
+    reportResponsible: Boolean(assignment.rows[0]?.report_responsible)
+  };
+}
+
+async function getSiteWorkspace(client, context, constructionSiteId, date) {
+  const siteResult = await client.query(
+    `SELECT site.id, site.project_id, project.customer_id, site.site_number,
+            site.name, site.installer_short_text, site.status, site.row_version,
+            site.updated_at, project.name AS project_name,
+            COALESCE(customer.company_name, customer.first_name || ' ' || customer.last_name) AS customer_name,
+            location.street, location.house_number, location.postal_code, location.city
+     FROM construction_sites AS site
+     JOIN projects AS project
+       ON project.company_id = site.company_id AND project.id = site.project_id
+     JOIN customers AS customer
+       ON customer.company_id = project.company_id AND customer.id = project.customer_id
+     LEFT JOIN customer_locations AS location
+       ON location.company_id = site.company_id AND location.id = site.customer_location_id
+     WHERE site.company_id = $1
+       AND site.id = $2
+       AND site.status <> 'cancelled'`,
+    [context.companyId, constructionSiteId]
+  );
+  if (siteResult.rowCount !== 1) {
+    throw new InputError("Die Baustelle wurde nicht gefunden.", 404, "site_not_found");
+  }
+
+  const access = await requireSiteWorkspaceAccess(client, context, constructionSiteId, date);
+  const [teamResult, documentResult, taskResult, materialResult, reportResult] = await Promise.all([
+    client.query(
+      `SELECT account.id, account.first_name, account.last_name,
+              assignment.report_responsible,
+              COALESCE(
+                jsonb_agg(DISTINCT role.role_key)
+                  FILTER (WHERE role.id IS NOT NULL),
+                '[]'::jsonb
+              ) AS roles
+       FROM site_assignments AS assignment
+       JOIN users AS account
+         ON account.company_id = assignment.company_id AND account.id = assignment.user_id
+       LEFT JOIN user_roles AS role_assignment
+         ON role_assignment.company_id = account.company_id
+        AND role_assignment.user_id = account.id
+        AND role_assignment.revoked_at IS NULL
+       LEFT JOIN roles AS role
+         ON role.company_id = role_assignment.company_id
+        AND role.id = role_assignment.role_id
+        AND role.status = 'active'
+       WHERE assignment.company_id = $1
+         AND assignment.construction_site_id = $2
+         AND assignment.work_date = $3
+         AND assignment.status IN ('released', 'completed')
+       GROUP BY account.id, assignment.report_responsible
+       ORDER BY assignment.report_responsible DESC, LOWER(account.last_name), LOWER(account.first_name)`,
+      [context.companyId, constructionSiteId, date]
+    ),
+    client.query(
+      `SELECT document.id, document.document_number, document.title, document.category,
+              document.original_file_name, document.mime_type, document.size_bytes,
+              document.created_at,
+              uploader.first_name || ' ' || uploader.last_name AS uploaded_by_name
+       FROM documents AS document
+       JOIN users AS uploader
+         ON uploader.company_id = document.company_id AND uploader.id = document.uploaded_by_user_id
+       JOIN document_links AS link
+         ON link.company_id = document.company_id
+        AND link.document_id = document.id
+        AND link.entity_type = 'construction_site'
+        AND link.construction_site_id = $2
+       WHERE document.company_id = $1
+         AND document.status = 'active'
+       ORDER BY document.created_at DESC, document.document_number DESC`,
+      [context.companyId, constructionSiteId]
+    ),
+    client.query(
+      `SELECT task.id, task.construction_site_id, task.title, task.details,
+              task.priority, task.status, task.assigned_user_id, task.due_date,
+              task.completed_at, task.row_version, task.created_at,
+              CASE WHEN assignee.id IS NULL THEN NULL ELSE assignee.first_name || ' ' || assignee.last_name END AS assigned_user_name
+       FROM site_tasks AS task
+       LEFT JOIN users AS assignee
+         ON assignee.company_id = task.company_id AND assignee.id = task.assigned_user_id
+       WHERE task.company_id = $1
+         AND task.construction_site_id = $2
+         AND task.status <> 'archived'
+         AND ($3::BOOLEAN OR task.assigned_user_id IS NULL OR task.assigned_user_id = $4)
+       ORDER BY CASE task.status WHEN 'open' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'done' THEN 3 ELSE 4 END,
+                CASE task.priority WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,
+                task.due_date NULLS LAST, task.created_at DESC`,
+      [context.companyId, constructionSiteId, access.canLead, context.userId]
+    ),
+    client.query(
+      `SELECT id, construction_site_id, item_name, quantity, unit, status,
+              note, row_version, created_at
+       FROM site_material_entries
+       WHERE company_id = $1
+         AND construction_site_id = $2
+         AND status <> 'archived'
+       ORDER BY CASE status WHEN 'planned' THEN 1 WHEN 'ordered' THEN 2 WHEN 'available' THEN 3 WHEN 'used' THEN 4 ELSE 5 END,
+                created_at DESC`,
+      [context.companyId, constructionSiteId]
+    ),
+    client.query(
+      `SELECT report.id, report.construction_site_id, report.report_number,
+              report.report_type, report.work_date, report.source_mode,
+              report.summary, report.details, report.source_document_id,
+              report.site_assignment_id, report.client_report_id,
+              report.status, report.approved_at, report.employee_signature_name,
+              report.customer_signature_name, report.final_document_id,
+              report.row_version, report.created_at,
+              author.first_name || ' ' || author.last_name AS author_name,
+              approver.first_name || ' ' || approver.last_name AS approved_by_name,
+              document.original_file_name AS source_document_file_name,
+              final_document.original_file_name AS final_document_file_name
+       FROM site_reports AS report
+       JOIN users AS author
+         ON author.company_id = report.company_id AND author.id = report.author_user_id
+       LEFT JOIN documents AS document
+         ON document.company_id = report.company_id AND document.id = report.source_document_id
+       LEFT JOIN users AS approver
+         ON approver.company_id = report.company_id AND approver.id = report.approved_by_user_id
+       LEFT JOIN documents AS final_document
+         ON final_document.company_id = report.company_id AND final_document.id = report.final_document_id
+       WHERE report.company_id = $1
+         AND report.construction_site_id = $2
+         AND report.status <> 'archived'
+         AND ($3::BOOLEAN OR report.status IN ('submitted', 'approved'))
+       ORDER BY report.work_date DESC, report.created_at DESC`,
+      [context.companyId, constructionSiteId, access.canLead]
+    )
+  ]);
+
+  return {
+    date,
+    site: siteDto(siteResult.rows[0]),
+    viewer: {
+      canManage: access.canManage,
+      canLead: access.canLead,
+      reportResponsible: access.reportResponsible
+    },
+    team: teamResult.rows.map((row) => ({
+      id: row.id,
+      name: `${row.first_name} ${row.last_name}`,
+      roles: row.roles,
+      reportResponsible: row.report_responsible
+    })),
+    documents: documentResult.rows.map(siteWorkspaceDocumentDto),
+    tasks: taskResult.rows.map(siteTaskDto),
+    materials: materialResult.rows.map(siteMaterialDto),
+    reports: reportResult.rows.map(siteReportDto)
+  };
+}
+
 async function getDocumentRecord(client, context, documentId) {
   const result = await client.query(
     `SELECT document.id, document.document_number, document.title, document.category,
@@ -914,8 +1111,7 @@ async function insertDocumentLinks(client, context, documentId, targets) {
   }
 }
 
-async function createDocument(client, context, input) {
-  await requirePlanner(client, context);
+async function storeDocument(client, context, input) {
   const targets = await resolveDocumentTargets(client, context, input);
   const sha256 = createHash("sha256").update(input.content).digest("hex");
   const inserted = await client.query(
@@ -968,6 +1164,16 @@ async function createDocument(client, context, input) {
   return { document: await getDocumentRecord(client, context, documentId), reused };
 }
 
+async function createDocument(client, context, input) {
+  await requirePlanner(client, context);
+  return storeDocument(client, context, input);
+}
+
+async function createSitePhoto(client, context, constructionSiteId, date, input) {
+  await requireSiteWorkspaceAccess(client, context, constructionSiteId, date);
+  return storeDocument(client, context, input);
+}
+
 async function getDocumentContent(client, context, documentId) {
   await requirePlanner(client, context);
   const result = await client.query(
@@ -980,6 +1186,33 @@ async function getDocumentContent(client, context, documentId) {
   );
   if (result.rowCount !== 1) {
     throw new InputError("Das Dokument wurde nicht gefunden.", 404, "document_not_found");
+  }
+  return {
+    fileName: result.rows[0].original_file_name,
+    mimeType: result.rows[0].mime_type,
+    content: result.rows[0].content
+  };
+}
+
+async function getSiteDocumentContent(client, context, constructionSiteId, documentId, date) {
+  await requireSiteWorkspaceAccess(client, context, constructionSiteId, date);
+  const result = await client.query(
+    `SELECT document.original_file_name, document.mime_type, content.content
+     FROM documents AS document
+     JOIN document_contents AS content
+       ON content.company_id = document.company_id AND content.document_id = document.id
+     JOIN document_links AS link
+       ON link.company_id = document.company_id
+      AND link.document_id = document.id
+      AND link.entity_type = 'construction_site'
+      AND link.construction_site_id = $2
+     WHERE document.company_id = $1
+       AND document.id = $3
+       AND document.status = 'active'`,
+    [context.companyId, constructionSiteId, documentId]
+  );
+  if (result.rowCount !== 1) {
+    throw new InputError("Das Baustellendokument wurde nicht gefunden.", 404, "document_not_found");
   }
   return {
     fileName: result.rows[0].original_file_name,
@@ -2718,6 +2951,64 @@ export function createApp({ pool, config, limiter = new LoginRateLimiter(), logg
           (client, context) => changeInitialPassword(client, context, input.newPassword)
         );
         return json(response, 200, { changed: true, session: view });
+      }
+
+      const siteWorkspaceMatch = /^\/api\/v1\/construction-sites\/([^/]+)\/dashboard$/.exec(url.pathname);
+      if (request.method === "GET" && siteWorkspaceMatch) {
+        const constructionSiteId = validateId(siteWorkspaceMatch[1], "Baustellen-ID");
+        const date = validateWorkDate(
+          url.searchParams.get("date") || localDate(new Date().toISOString(), config.timeZone)
+        );
+        const dashboard = await withReadySession(
+          pool,
+          tokenHash,
+          (client, context) => getSiteWorkspace(client, context, constructionSiteId, date)
+        );
+        return json(response, 200, { dashboard });
+      }
+
+      const sitePhotoMatch = /^\/api\/v1\/construction-sites\/([^/]+)\/photos$/.exec(url.pathname);
+      if (request.method === "POST" && sitePhotoMatch) {
+        const constructionSiteId = validateId(sitePhotoMatch[1], "Baustellen-ID");
+        const date = validateWorkDate(
+          url.searchParams.get("date") || localDate(new Date().toISOString(), config.timeZone)
+        );
+        const body = await readJson(request, 7_000_000);
+        const input = validateDocumentUpload({
+          ...body,
+          category: "photo",
+          customerId: null,
+          projectId: null,
+          constructionSiteId
+        });
+        const created = await withReadySession(
+          pool,
+          tokenHash,
+          (client, context) => createSitePhoto(client, context, constructionSiteId, date, input)
+        );
+        return json(response, 201, created);
+      }
+
+      const siteDocumentContentMatch =
+        /^\/api\/v1\/construction-sites\/([^/]+)\/documents\/([^/]+)\/content$/.exec(url.pathname);
+      if (request.method === "GET" && siteDocumentContentMatch) {
+        const constructionSiteId = validateId(siteDocumentContentMatch[1], "Baustellen-ID");
+        const documentId = validateId(siteDocumentContentMatch[2], "Dokument-ID");
+        const date = validateWorkDate(
+          url.searchParams.get("date") || localDate(new Date().toISOString(), config.timeZone)
+        );
+        const document = await withReadySession(
+          pool,
+          tokenHash,
+          (client, context) => getSiteDocumentContent(
+            client,
+            context,
+            constructionSiteId,
+            documentId,
+            date
+          )
+        );
+        return attachment(response, document);
       }
 
       if (request.method === "GET" && url.pathname === "/api/v1/admin/overview") {

@@ -1,7 +1,7 @@
 # API-Sicherheitsgrenze
 
-Stand: 21.07.2026
-Technischer Stand: V0.21.0
+Stand: 26.07.2026
+Technischer Stand: V0.22.0
 
 Die API ist die einzige erlaubte Verbindung zwischen PWA und PostgreSQL. Die
 öffentliche GitHub-Pages-Adresse bleibt eine lokale Demo. Im Online-Betrieb
@@ -68,6 +68,9 @@ API setzt beide Werte ausschließlich selbst.
 | `GET` | `/api/v1/setup` | Status der einmaligen Ersteinrichtung lesen |
 | `POST` | `/api/v1/setup` | Genau den ersten Admin geschützt anlegen |
 | `POST` | `/api/v1/account/initial-password` | Persönliches Startpasswort einmalig ersetzen |
+| `GET` | `/api/v1/construction-sites/:id/dashboard?date=JJJJ-MM-TT` | Rollen- und einsatzbezogene mobile Baustellenakte lesen |
+| `POST` | `/api/v1/construction-sites/:id/photos?date=JJJJ-MM-TT` | Foto für eine an diesem Tag zugewiesene Baustelle zentral speichern |
+| `GET` | `/api/v1/construction-sites/:id/documents/:documentId/content?date=JJJJ-MM-TT` | mit Baustellenzuweisung verknüpften Dateiinhalt geschützt lesen |
 | `GET` | `/api/v1/admin/overview?date=JJJJ-MM-TT` | Mitarbeiter, Kunden, Projekte, Baustellen, Dokumente, Arbeitsmodule und Wochenplanung Montag bis Freitag |
 | `POST` | `/api/v1/admin/site-tasks` | Aufgabe für eine aktive Baustelle anlegen |
 | `PATCH` | `/api/v1/admin/site-tasks/:id` | Aufgabenstatus versionsgeschützt ändern |
@@ -117,6 +120,14 @@ Geschäftsführer vergeben. Bestehende Konten mit `office`, `planner` oder
 neu angeboten. Monteur und Vorarbeiter erhalten keine Verwaltungsrechte. Bis zum
 persönlichen Wechsel des Startpassworts sind Fach- und Verwaltungsendpunkte für
 das neue Konto gesperrt.
+
+Die mobile Baustellenakte besitzt eine zusätzliche fachliche Zugriffskontrolle:
+Ohne Planungsrolle muss für Benutzer, Baustelle und Datum ein freigegebener oder
+abgeschlossener Einsatz existieren. Eine gültige UUID oder derselbe Mandant
+allein genügt nicht. Monteure erhalten nur eigene beziehungsweise allgemeine
+Aufgaben; Vorarbeiter sehen die vollständigen Inhalte der zugewiesenen
+Baustelle. Auch Foto-Upload und Dateiabruf wiederholen dieselbe Prüfung und
+verlangen eine tatsächliche Dokumentverknüpfung mit genau dieser Baustelle.
 
 Der Excel-Import akzeptiert ausschließlich `.xlsx` bis 1,5 MB. Zusätzlich
 werden Archivstruktur, entpackte Gesamtgröße, Tabellenabmessungen und maximale

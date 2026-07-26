@@ -1,7 +1,7 @@
 # Zentrales Dokumentenmodell
 
-Stand: 21.07.2026
-Technischer Stand: V0.21.0
+Stand: 26.07.2026
+Technischer Stand: V0.22.0
 
 ## Grundsatz
 
@@ -27,6 +27,7 @@ Baustelle und Dokumentenverwaltung sichtbar.
 - Lieferscheine sind bewusst auf JPEG-, PNG- oder WebP-Fotos begrenzt
 - maximale Dateigröße: 5 MB
 - Download ausschließlich nach gültiger Sitzung und Verwaltungsrollenprüfung
+  oder nach tagesgenau geprüfter Baustellenzuweisung
 - Download immer als Anlage mit `nosniff` und ohne Browser-Cache
 - Archivierung statt Hartlöschen; Datei und Beziehungen bleiben erhalten
 - optimistische Versionsprüfung über `row_version`
@@ -48,3 +49,6 @@ die verknüpften Dokumente im vorhandenen Themenbereich angezeigt und können vo
 dort geöffnet oder ergänzt werden. „Lieferschein fotografieren“ öffnet auf
 Mobilgeräten direkt die Kamera und verknüpft das gespeicherte Original
 automatisch mit der geöffneten Baustelle sowie deren Projekt und Kunde.
+Der mobile Bereich **Fotos** verwendet dasselbe Prinzip: Aufnahmen von
+zugewiesenen Monteuren und Vorarbeitern werden als Kategorie `photo` zentral
+gespeichert und nur als eigene thematische Liste dargestellt.

@@ -1,7 +1,7 @@
 # Baustellenarbeit: Aufgaben, Material und Berichte
 
-Stand: 22.07.2026
-Technischer Stand: V0.21.0
+Stand: 26.07.2026
+Technischer Stand: V0.22.0
 
 ## Bedienkonzept
 
@@ -20,6 +20,25 @@ Die Oberfläche folgt den festgelegten Gestaltungsregeln:
   Firmenlogo und Akzentfarbe aus dem Mandanten-Branding stammen;
 - jede sichtbare Aktion besitzt einen echten, serverseitig geprüften Ablauf.
 
+## Mobile Baustellenakte
+
+Der Details-Knopf des aktuellen Tageseinsatzes öffnet die Baustelle als eigenen
+Arbeitsbereich. Arbeitsauftrag und Navigation stehen zuerst; darunter folgen
+sichtbare, getrennte Karten für Mitarbeiter, Aufgaben, Berichte, Dokumente,
+Fotos und Material. Die Ansicht ist keine chronologische Pinnwand und erzeugt
+keinen zusätzlichen Hauptmenüpunkt.
+
+Monteur und Vorarbeiter benötigen für genau diesen Tag einen freigegebenen oder
+abgeschlossenen Einsatz an der Baustelle. Monteure sehen nur eigene und
+allgemeine Aufgaben. Vorarbeiter sehen das vollständige Team und alle
+Baustelleninhalte. Administrator, Geschäftsführung, Büro/Disposition und
+Projektleitung dürfen jede Baustelle des Sitzungsmandanten öffnen.
+
+Die zuletzt erfolgreich geladene Übersicht wird ohne Dateiinhalt lokal
+zwischengespeichert. Dadurch bleiben Auftrag, Team und Listen bei einem
+Verbindungsabbruch lesbar. Schreibaktionen warten weiterhin auf eine sichere
+Serververbindung.
+
 ## Aufgaben
 
 `site_tasks` speichert Aufgabe, Beschreibung, Priorität, optionalen Mitarbeiter,
@@ -33,6 +52,14 @@ optional `archived`. Beim Abschluss setzt PostgreSQL den Abschlusszeitpunkt.
 enthält Bezeichnung, Menge, Einheit, Hinweis und den Stand `planned`, `ordered`,
 `available`, `used` oder `archived`. Die mobile Oberfläche führt schrittweise
 von „Benötigt“ über „Bestellt“ und „Vor Ort“ bis „Verbraucht“.
+
+## Baustellenfotos
+
+„Foto aufnehmen“ öffnet auf Mobilgeräten direkt die Kamera. Das Bild wird als
+Dokument der Kategorie `photo` einmal gespeichert und automatisch mit
+Baustelle, Projekt und Kunde verknüpft. Der eigene Fotobereich ist lediglich
+eine thematische Sicht auf denselben zentralen Dokumentbestand und erzeugt
+keine zweite Dateikopie.
 
 ## Montage- und Bautagesberichte
 

@@ -596,6 +596,55 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   assert.match(finalPdfResponse.headers.get("content-type"), /application\/pdf/);
   assert.equal(Buffer.from(await finalPdfResponse.arrayBuffer()).subarray(0, 5).toString("ascii"), "%PDF-");
 
+  const foremanSiteDashboardResponse = await fetch(
+    `${baseUrl}/api/v1/construction-sites/${structuredSite.id}/dashboard?date=${assignmentDate}`,
+    { headers: { Cookie: foremanCookie } }
+  );
+  assert.equal(
+    foremanSiteDashboardResponse.status,
+    200,
+    await foremanSiteDashboardResponse.clone().text()
+  );
+  const foremanSiteDashboard = (await foremanSiteDashboardResponse.json()).dashboard;
+  assert.equal(foremanSiteDashboard.site.id, structuredSite.id);
+  assert.equal(foremanSiteDashboard.viewer.canLead, true);
+  assert.equal(foremanSiteDashboard.viewer.canManage, false);
+  assert.equal(foremanSiteDashboard.viewer.reportResponsible, true);
+  assert.ok(foremanSiteDashboard.team.some((member) => (
+    member.id === foreman.id && member.reportResponsible
+  )));
+  assert.ok(foremanSiteDashboard.tasks.some((item) => item.id === completedSiteTask.id));
+  assert.ok(foremanSiteDashboard.materials.some((item) => item.id === siteMaterial.id));
+  assert.ok(foremanSiteDashboard.reports.some((item) => item.id === mobileReport.id));
+  assert.ok(foremanSiteDashboard.documents.some((item) => item.id === uploadedDocument.id));
+
+  const sitePhotoContent = Buffer.from(`JPEG-Baustellenfoto-${suffix}`);
+  const sitePhotoUploadResponse = await fetch(
+    `${baseUrl}/api/v1/construction-sites/${structuredSite.id}/photos?date=${assignmentDate}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: foremanCookie },
+      body: JSON.stringify({
+        title: `Baustellenfoto ${suffix}`,
+        fileName: `Baustellenfoto-${suffix}.jpg`,
+        mimeType: "image/jpeg",
+        contentBase64: sitePhotoContent.toString("base64")
+      })
+    }
+  );
+  assert.equal(sitePhotoUploadResponse.status, 201, await sitePhotoUploadResponse.clone().text());
+  const sitePhoto = (await sitePhotoUploadResponse.json()).document;
+  assert.equal(sitePhoto.category, "photo");
+  assert.ok(sitePhoto.links.some((link) => link.constructionSiteId === structuredSite.id));
+
+  const sitePhotoDownloadResponse = await fetch(
+    `${baseUrl}/api/v1/construction-sites/${structuredSite.id}/documents/${sitePhoto.id}/content?date=${assignmentDate}`,
+    { headers: { Cookie: foremanCookie } }
+  );
+  assert.equal(sitePhotoDownloadResponse.status, 200);
+  assert.equal(sitePhotoDownloadResponse.headers.get("content-type"), "image/jpeg");
+  assert.deepEqual(Buffer.from(await sitePhotoDownloadResponse.arrayBuffer()), sitePhotoContent);
+
   const mismatchedDocumentResponse = await fetch(`${baseUrl}/api/v1/admin/documents`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: plannerCookie },
@@ -954,6 +1003,59 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   );
   assert.equal(employeeAssignments.status, 200);
   assert.equal((await employeeAssignments.json()).assignments[0].constructionSite.id, site.id);
+
+  const assignedInstallerDashboardResponse = await fetch(
+    `${baseUrl}/api/v1/construction-sites/${site.id}/dashboard?date=${assignmentDate}`,
+    { headers: { Cookie: employeeCookie } }
+  );
+  assert.equal(
+    assignedInstallerDashboardResponse.status,
+    200,
+    await assignedInstallerDashboardResponse.clone().text()
+  );
+  const assignedInstallerDashboard = (await assignedInstallerDashboardResponse.json()).dashboard;
+  assert.equal(assignedInstallerDashboard.site.id, site.id);
+  assert.equal(assignedInstallerDashboard.viewer.canLead, false);
+  assert.equal(assignedInstallerDashboard.viewer.canManage, false);
+
+  const installerPhotoResponse = await fetch(
+    `${baseUrl}/api/v1/construction-sites/${site.id}/photos?date=${assignmentDate}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: employeeCookie },
+      body: JSON.stringify({
+        title: `Monteurfoto ${suffix}`,
+        fileName: `Monteurfoto-${suffix}.jpg`,
+        mimeType: "image/jpeg",
+        contentBase64: Buffer.from(`JPEG-Monteurfoto-${suffix}`).toString("base64")
+      })
+    }
+  );
+  assert.equal(installerPhotoResponse.status, 201, await installerPhotoResponse.clone().text());
+  assert.equal((await installerPhotoResponse.json()).document.category, "photo");
+
+  const unassignedInstallerDashboardResponse = await fetch(
+    `${baseUrl}/api/v1/construction-sites/${structuredSite.id}/dashboard?date=${assignmentDate}`,
+    { headers: { Cookie: employeeCookie } }
+  );
+  assert.equal(unassignedInstallerDashboardResponse.status, 403);
+  assert.equal((await unassignedInstallerDashboardResponse.json()).error.code, "site_not_assigned");
+
+  const unassignedInstallerPhotoResponse = await fetch(
+    `${baseUrl}/api/v1/construction-sites/${structuredSite.id}/photos?date=${assignmentDate}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: employeeCookie },
+      body: JSON.stringify({
+        title: "Unzulässiges Fremdfoto",
+        fileName: "Fremdfoto.jpg",
+        mimeType: "image/jpeg",
+        contentBase64: Buffer.from("JPEG-Fremdfoto").toString("base64")
+      })
+    }
+  );
+  assert.equal(unassignedInstallerPhotoResponse.status, 403);
+  assert.equal((await unassignedInstallerPhotoResponse.json()).error.code, "site_not_assigned");
 
   const forbiddenInstallerReport = await fetch(`${baseUrl}/api/v1/site-reports`, {
     method: "POST",
