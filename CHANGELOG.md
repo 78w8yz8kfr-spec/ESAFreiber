@@ -4,6 +4,14 @@ Alle wesentlichen Änderungen an Schäfchen werden in dieser Datei dokumentiert.
 
 ## [Unreleased]
 
+### V0.26.0 – Grundlage für optionale Elektro-Module
+
+- firmenbezogene Modulfreigaben für VDE, DGUV, LWL und KNX
+- Aktivierung ausschließlich durch Administration oder Geschäftsführung
+- serverseitiger Mandantenfilter, Versionskonfliktschutz und unveränderliche Änderungshistorie
+- deaktivierte und noch nicht fachlich angebundene Module bleiben vollständig aus der Oberfläche ausgeblendet
+- Migration 029 sowie SQL-, API-, PostgreSQL- und Validierungstests
+
 ### V0.25.1 – Netto-Arbeitszeit im Stundenzettel
 
 - die große rote Stundenzettel-Anzeige zeigt jetzt die tatsächliche Netto-Arbeitszeit

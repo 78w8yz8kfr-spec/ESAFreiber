@@ -43,6 +43,7 @@ const SITE_TASK_STATUSES = new Set(["open", "in_progress", "done", "archived"]);
 const SITE_MATERIAL_STATUSES = new Set(["planned", "ordered", "available", "used", "archived"]);
 const SITE_REPORT_TYPES = new Set(["montage", "daily"]);
 const SITE_REPORT_SOURCES = new Set(["digital", "photo", "speech"]);
+const ELECTRICAL_MODULE_KEYS = new Set(["vde", "dguv", "lwl", "knx"]);
 const PNG_DATA_URL_PREFIX = "data:image/png;base64,";
 
 export class InputError extends Error {
@@ -434,6 +435,23 @@ export function validateDocumentStatusUpdate(body) {
     throw new InputError("Die Dokumentversion ist ungültig.");
   }
   return { status, rowVersion };
+}
+
+export function validateCompanyModuleUpdate(moduleKey, body) {
+  rejectTenantFields(body);
+  const normalizedKey = text(moduleKey, "Modul", 3, 30).toLowerCase();
+  if (!ELECTRICAL_MODULE_KEYS.has(normalizedKey)) {
+    throw new InputError("Das Elektro-Spezialmodul ist ungültig.");
+  }
+  const rowVersion = Number(body.rowVersion);
+  if (!Number.isSafeInteger(rowVersion) || rowVersion < 0) {
+    throw new InputError("Die Modulversion ist ungültig.");
+  }
+  return {
+    moduleKey: normalizedKey,
+    enabled: boolean(body.enabled, "Modulstatus"),
+    rowVersion
+  };
 }
 
 export function validateSiteTask(body) {

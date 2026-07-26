@@ -1,7 +1,7 @@
 # API-Sicherheitsgrenze
 
 Stand: 26.07.2026
-Technischer Stand: V0.25.1
+Technischer Stand: V0.26.0
 
 Die API ist die einzige erlaubte Verbindung zwischen PWA und PostgreSQL. Die
 öffentliche GitHub-Pages-Adresse bleibt eine lokale Demo. Im Online-Betrieb
@@ -28,6 +28,15 @@ Firmennummer im Hintergrund; normale Benutzer sehen nur Personalnummer und
 Passwort. Die Funktion
 `api_lookup_login_user` führt die eng begrenzte Suche vor dem Mandantenkontext
 aus. Sie ist nur für die NOLOGIN-Rolle `schaefchen_api` ausführbar.
+
+## Elektro-Spezialmodule
+
+`GET /api/v1/admin/modules` und `PATCH /api/v1/admin/modules/:moduleKey`
+arbeiten ausschließlich im Mandanten der aktiven Sitzung. Nur Administrator
+und Geschäftsführung dürfen VDE, DGUV, LWL oder KNX aktivieren und
+deaktivieren. Der Client sendet weder Firmen-ID noch Benutzer-ID. Änderungen
+werden mit Versionsstand geprüft und serverseitig dem angemeldeten Benutzer
+zugeordnet; die zugehörige Historie ist unveränderlich.
 
 Passwörter haben das Format
 `scrypt$N$r$p$salt-base64url$hash-base64url`. Zulässige Parameter sind begrenzt,

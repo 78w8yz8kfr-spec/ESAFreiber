@@ -8,6 +8,7 @@ import {
   validateAssignmentUpdate,
   validateConstructionSite,
   validateConstructionSiteUpdate,
+  validateCompanyModuleUpdate,
   validateCustomer,
   validateCustomerUpdate,
   validateDocumentStatusUpdate,
@@ -31,6 +32,25 @@ import {
   validateTimeEntry,
   validateWorkDate
 } from "../src/validation.mjs";
+
+test("Elektro-Module verlangen bekannten Schlüssel Status und Versionsstand", () => {
+  assert.deepEqual(
+    validateCompanyModuleUpdate("VDE", { enabled: true, rowVersion: 0 }),
+    { moduleKey: "vde", enabled: true, rowVersion: 0 }
+  );
+  assert.throws(
+    () => validateCompanyModuleUpdate("rechnung", { enabled: true, rowVersion: 0 }),
+    /Elektro-Spezialmodul/
+  );
+  assert.throws(
+    () => validateCompanyModuleUpdate("vde", { enabled: "ja", rowVersion: 0 }),
+    /Modulstatus/
+  );
+  assert.throws(
+    () => validateCompanyModuleUpdate("vde", { enabled: true, rowVersion: -1 }),
+    /Modulversion/
+  );
+});
 
 test("Dokumente werden typ-, größen- und zuordnungsbezogen geprüft", () => {
   const document = validateDocumentUpload({

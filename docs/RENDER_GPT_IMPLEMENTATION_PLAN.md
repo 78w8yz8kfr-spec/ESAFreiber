@@ -91,6 +91,9 @@ dürfen keine parallelen Stammdatenbestände erzeugen.
 5. **Elektro-Spezialmodule**
    VDE, DGUV, LWL und KNX werden einzeln aktivierbar und verwenden dieselben
    Kunden, Projekte, Baustellen, Dokumente und Mitarbeiter.
+   Die mandantengetrennte Freigabe, Rollenprüfung und unveränderliche
+   Änderungshistorie sind mit V0.26.0 vorbereitet. Die sichtbare Anbindung
+   beginnt kontrolliert mit der vorhandenen VDE-Anwendung.
 6. **Ausbildungsnachweise**
    Wochenberichte, Berufsschule, Urlaub/Krankheit, Erinnerungen, Unterschriften,
    Sammelfreigabe, Rückgabe und unveränderliche Historie.

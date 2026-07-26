@@ -1,7 +1,7 @@
 # Projektstatus
 
 Stand: 26.07.2026
-Technischer Stand: V0.25.1
+Technischer Stand: V0.26.0
 
 ## Abgeschlossen
 
@@ -139,6 +139,9 @@ Technischer Stand: V0.25.1
 - Büro und berechtigt eingeplante Mitarbeiter sehen denselben thematischen Notizbestand direkt in der Baustellenakte
 - wichtige Hinweise werden hervorgehoben; Verfasser und Erstellungszeitpunkt bleiben nachvollziehbar
 - eine Client-UUID verhindert doppelte Notizen bei wiederholtem mobilen Absenden
+- Migration 029 schafft mandantengetrennte Freigaben für VDE, DGUV, LWL und KNX
+- nur Administration und Geschäftsführung dürfen Spezialmodule aktivieren; jede Änderung besitzt Versionsschutz und unveränderliche Historie
+- deaktivierte oder noch nicht vollständig angebundene Module erzeugen keine leeren Menüpunkte
 
 ## Noch zu prüfen
 
@@ -150,10 +153,15 @@ Technischer Stand: V0.25.1
 
 ## Nächster Entwicklungsschritt
 
-Dauerhafte Datenbank, Backup-Plan, Wiederherstellungsprobe, Überwachung und
-Objektspeicher werden als Nächstes für den Betriebsstart festgelegt. Mobile
-Aufgabenaktionen bleiben gemäß der aktuellen Priorisierung zunächst
-übersprungen.
+Die vorhandene VDE-Anwendung wird als erstes aktivierbares Elektro-Spezialmodul
+kontrolliert an den gemeinsamen Kunden-, Projekt-, Baustellen-, Mitarbeiter-
+und Dokumentenbestand angebunden.
+
+Betriebssicherheit mit dauerhafter Datenbank, Backup-Plan,
+Wiederherstellungsprobe, Überwachung und Objektspeicher wurde auf ausdrücklichen
+Wunsch für diesen Schritt übersprungen und bleibt vor echten Betriebsdaten
+verbindlich nachzuholen. Mobile Aufgabenaktionen bleiben gemäß der aktuellen
+Priorisierung ebenfalls zunächst übersprungen.
 
 Die öffentliche GitHub-Pages-PWA bleibt eindeutig als lokale Demo
 gekennzeichnet; die echte Anmeldung läuft ausschließlich auf der gemeinsamen

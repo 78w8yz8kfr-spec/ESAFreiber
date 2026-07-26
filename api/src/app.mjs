@@ -37,6 +37,7 @@ import {
   validateAssignmentUpdate,
   validateConstructionSite,
   validateConstructionSiteUpdate,
+  validateCompanyModuleUpdate,
   validateCustomer,
   validateCustomerUpdate,
   validateDocumentStatusUpdate,
@@ -74,6 +75,28 @@ const PLANNER_ROLES = new Set([
 ]);
 const MANAGEMENT_ROLES = new Set(["managing_director", "dispatch_office", "project_manager"]);
 const MANAGEMENT_ASSIGNER_ROLES = new Set(["admin", "managing_director"]);
+const ELECTRICAL_MODULES = [
+  {
+    key: "vde",
+    name: "VDE",
+    description: "Prüfungen elektrischer Anlagen und Betriebsmittel"
+  },
+  {
+    key: "dguv",
+    name: "DGUV",
+    description: "Wiederkehrende Prüfungen elektrischer Betriebsmittel"
+  },
+  {
+    key: "lwl",
+    name: "LWL",
+    description: "Glasfaser-Messungen und Dokumentation"
+  },
+  {
+    key: "knx",
+    name: "KNX",
+    description: "Gebäudeautomation, Inbetriebnahme und Dokumentation"
+  }
+];
 
 function json(response, status, body, headers = {}) {
   const encoded = JSON.stringify(body);
@@ -361,6 +384,18 @@ async function requirePlanner(client, context) {
   return roles;
 }
 
+async function requireModuleAdministrator(client, context) {
+  const roles = await activeRoleKeys(client, context);
+  if (![...roles].some((role) => MANAGEMENT_ASSIGNER_ROLES.has(role))) {
+    throw new InputError(
+      "Module dürfen nur durch Administration oder Geschäftsführung freigeschaltet werden.",
+      403,
+      "module_administration_forbidden"
+    );
+  }
+  return roles;
+}
+
 async function requirePasswordReady(client, context) {
   const result = await client.query(
     "SELECT must_change_password FROM users WHERE company_id = $1 AND id = $2 AND status = 'active'",
@@ -391,6 +426,97 @@ function employeeDto(row) {
     mustChangePassword: row.must_change_password,
     rowVersion: Number(row.row_version || 1)
   };
+}
+
+function companyModuleDto(definition, row) {
+  return {
+    key: definition.key,
+    name: definition.name,
+    description: definition.description,
+    enabled: Boolean(row?.is_enabled),
+    rowVersion: row ? Number(row.row_version) : 0,
+    changedAt: row?.updated_at ? new Date(row.updated_at).toISOString() : null,
+    changedByName: row?.changed_by_name || null
+  };
+}
+
+async function loadCompanyModules(client, context) {
+  const result = await client.query(
+    `SELECT module.module_key, module.is_enabled, module.row_version,
+            module.updated_at,
+            account.first_name || ' ' || account.last_name AS changed_by_name
+     FROM company_modules AS module
+     JOIN users AS account
+       ON account.company_id = module.company_id
+      AND account.id = module.changed_by_user_id
+     WHERE module.company_id = $1`,
+    [context.companyId]
+  );
+  const rows = new Map(result.rows.map((row) => [row.module_key, row]));
+  return ELECTRICAL_MODULES.map((definition) => (
+    companyModuleDto(definition, rows.get(definition.key))
+  ));
+}
+
+async function getCompanyModules(client, context) {
+  await requireModuleAdministrator(client, context);
+  return loadCompanyModules(client, context);
+}
+
+async function updateCompanyModule(client, context, input) {
+  await requireModuleAdministrator(client, context);
+  const existing = await client.query(
+    `SELECT module_key, is_enabled, row_version
+     FROM company_modules
+     WHERE company_id = $1 AND module_key = $2
+     FOR UPDATE`,
+    [context.companyId, input.moduleKey]
+  );
+
+  if (existing.rowCount === 0) {
+    if (input.rowVersion !== 0) {
+      throw new InputError(
+        "Die Modulfreigabe wurde geändert. Bitte neu laden.",
+        409,
+        "row_version_conflict"
+      );
+    }
+    const inserted = await client.query(
+      `INSERT INTO company_modules (
+         company_id, module_key, is_enabled, changed_by_user_id
+       ) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (company_id, module_key) DO NOTHING
+       RETURNING module_key`,
+      [context.companyId, input.moduleKey, input.enabled, context.userId]
+    );
+    if (inserted.rowCount !== 1) {
+      throw new InputError(
+        "Die Modulfreigabe wurde gleichzeitig angelegt. Bitte neu laden.",
+        409,
+        "row_version_conflict"
+      );
+    }
+  } else {
+    const current = existing.rows[0];
+    if (Number(current.row_version) !== input.rowVersion) {
+      throw new InputError(
+        "Die Modulfreigabe wurde geändert. Bitte neu laden.",
+        409,
+        "row_version_conflict"
+      );
+    }
+    if (current.is_enabled !== input.enabled) {
+      await client.query(
+        `UPDATE company_modules
+         SET is_enabled = $3, changed_by_user_id = $4
+         WHERE company_id = $1 AND module_key = $2`,
+        [context.companyId, input.moduleKey, input.enabled, context.userId]
+      );
+    }
+  }
+
+  const modules = await loadCompanyModules(client, context);
+  return modules.find((module) => module.key === input.moduleKey);
 }
 
 function siteDto(row) {
@@ -3604,6 +3730,29 @@ export function createApp({ pool, config, limiter = new LoginRateLimiter(), logg
           (client, context) => adminOverview(client, context, date)
         );
         return json(response, 200, { overview });
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/v1/admin/modules") {
+        const modules = await withReadySession(
+          pool,
+          tokenHash,
+          getCompanyModules
+        );
+        return json(response, 200, { modules });
+      }
+
+      const adminModuleMatch = /^\/api\/v1\/admin\/modules\/([^/]+)$/.exec(url.pathname);
+      if (request.method === "PATCH" && adminModuleMatch) {
+        const input = validateCompanyModuleUpdate(
+          adminModuleMatch[1],
+          await readJson(request)
+        );
+        const module = await withReadySession(
+          pool,
+          tokenHash,
+          (client, context) => updateCompanyModule(client, context, input)
+        );
+        return json(response, 200, { module });
       }
 
       if (request.method === "POST" && url.pathname === "/api/v1/admin/site-notes") {

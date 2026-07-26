@@ -211,6 +211,43 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   });
   assert.equal(directorPasswordChange.status, 200);
 
+  const initialModulesResponse = await fetch(`${baseUrl}/api/v1/admin/modules`, {
+    headers: { Cookie: cookie }
+  });
+  assert.equal(initialModulesResponse.status, 200);
+  const initialModules = (await initialModulesResponse.json()).modules;
+  assert.deepEqual(initialModules.map((module) => module.key), ["vde", "dguv", "lwl", "knx"]);
+  assert.ok(initialModules.every((module) => !module.enabled && module.rowVersion === 0));
+
+  const forbiddenModuleAdministration = await fetch(`${baseUrl}/api/v1/admin/modules`, {
+    headers: { Cookie: plannerCookie }
+  });
+  assert.equal(forbiddenModuleAdministration.status, 403);
+  assert.equal(
+    (await forbiddenModuleAdministration.json()).error.code,
+    "module_administration_forbidden"
+  );
+
+  const vdeActivationResponse = await fetch(`${baseUrl}/api/v1/admin/modules/vde`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Cookie: directorCookie },
+    body: JSON.stringify({ enabled: true, rowVersion: 0 })
+  });
+  assert.equal(vdeActivationResponse.status, 200, await vdeActivationResponse.clone().text());
+  const activatedVde = (await vdeActivationResponse.json()).module;
+  assert.equal(activatedVde.key, "vde");
+  assert.equal(activatedVde.enabled, true);
+  assert.equal(activatedVde.rowVersion, 1);
+  assert.equal(activatedVde.changedByName, "Gesa Geschäftsführung");
+
+  const staleVdeActivationResponse = await fetch(`${baseUrl}/api/v1/admin/modules/vde`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Cookie: cookie },
+    body: JSON.stringify({ enabled: false, rowVersion: 0 })
+  });
+  assert.equal(staleVdeActivationResponse.status, 409);
+  assert.equal((await staleVdeActivationResponse.json()).error.code, "row_version_conflict");
+
   const directorOverview = await fetch(
     `${baseUrl}/api/v1/admin/overview?date=${assignmentDate}`,
     { headers: { Cookie: directorCookie } }
