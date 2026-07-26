@@ -1,7 +1,7 @@
 # API-Sicherheitsgrenze
 
 Stand: 26.07.2026
-Technischer Stand: V0.26.1
+Technischer Stand: V0.27.0
 
 Die API ist die einzige erlaubte Verbindung zwischen PWA und PostgreSQL. Die
 öffentliche GitHub-Pages-Adresse bleibt eine lokale Demo. Im Online-Betrieb
@@ -115,6 +115,8 @@ API setzt beide Werte ausschließlich selbst.
 | `GET` | `/api/v1/site-assignments/:date` | Eigene freigegebene Tageseinsätze lesen |
 | `POST` | `/api/v1/site-reports` | Mobilen Bericht idempotent erfassen; nur für den berichtspflichtig eingeteilten Vorarbeiter |
 | `POST` | `/api/v1/time-entries` | Offline-Zeitereignis idempotent synchronisieren |
+| `POST` | `/api/v1/time-entry-corrections` | Begründete Korrektur einer eigenen wirksamen Zeitbuchung beantragen |
+| `PATCH` | `/api/v1/admin/time-entry-corrections/:id` | Offenen Korrekturantrag genehmigen oder ablehnen |
 
 Der Zeitendpunkt verlangt eine Client-UUID, Buchungsart und ISO-Zeitpunkte mit
 Zeitzone. Baustellenereignisse benötigen eine für diesen Mitarbeiter und Tag
@@ -125,6 +127,14 @@ erfolgreich idempotent; abweichende Daten führen zu `409 Conflict`.
 Nach einem wirksamen Feierabend ist ausschließlich ein neuer Arbeitsbeginn
 zulässig. Dadurch entstehen mehrere getrennte, historisch erhaltene
 Arbeitsblöcke desselben Tages ohne überlappende Buchungen.
+
+Eine Zeitkorrektur übernimmt niemals Firma, Mitarbeiter oder Arbeitstag aus dem
+Client. Die API löst das eigene wirksame Original aus der Sitzung auf, verlangt
+denselben lokalen Arbeitstag und prüft die vollständige Ereignis- und
+Baustellenreihenfolge. Ein offener Antrag verändert den Stundenzettel nicht.
+Erst eine berechtigte Genehmigung entwertet das Original historisch und löst
+die serverseitige Neuberechnung aus. Ablehnungen lassen die Originalzeit
+unverändert.
 
 Die Verwaltungsendpunkte prüfen zusätzlich die aktiven Rollen aus der
 serverseitig aufgelösten Sitzung. Administrator, Geschäftsführer,

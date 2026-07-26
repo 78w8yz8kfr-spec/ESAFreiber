@@ -44,6 +44,7 @@ const SITE_MATERIAL_STATUSES = new Set(["planned", "ordered", "available", "used
 const SITE_REPORT_TYPES = new Set(["montage", "daily"]);
 const SITE_REPORT_SOURCES = new Set(["digital", "photo", "speech"]);
 const ELECTRICAL_MODULE_KEYS = new Set(["vde", "dguv"]);
+const TIME_CORRECTION_DECISIONS = new Set(["approved", "rejected"]);
 const PNG_DATA_URL_PREFIX = "data:image/png;base64,";
 
 export class InputError extends Error {
@@ -664,6 +665,30 @@ export function validateTimeEntry(body) {
   }
 
   return { clientEntryId, entryType, recordedAt, clientCreatedAt, constructionSiteId };
+}
+
+export function validateTimeEntryCorrection(body) {
+  rejectTenantFields(body);
+  const originalEntryId = uuid(body.originalEntryId, "Zeitbuchungs-ID");
+  const requestedRecordedAt = text(body.requestedRecordedAt, "Gewünschter Zeitpunkt", 20, 35);
+  const requestedDate = new Date(requestedRecordedAt);
+  if (Number.isNaN(requestedDate.valueOf()) || !/[zZ]|[+-]\d{2}:\d{2}$/.test(requestedRecordedAt)) {
+    throw new InputError("Der gewünschte Zeitpunkt benötigt Datum, Uhrzeit und Zeitzone.");
+  }
+  return {
+    originalEntryId,
+    requestedRecordedAt,
+    reason: text(body.reason, "Korrekturgrund", 5, 500)
+  };
+}
+
+export function validateTimeEntryCorrectionDecision(body) {
+  rejectTenantFields(body);
+  const decision = text(body.decision, "Entscheidung", 7, 8).toLowerCase();
+  if (!TIME_CORRECTION_DECISIONS.has(decision)) {
+    throw new InputError("Die Korrekturentscheidung ist ungültig.");
+  }
+  return { decision };
 }
 
 export function localDate(instant, timeZone) {

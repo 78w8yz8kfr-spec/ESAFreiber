@@ -30,6 +30,8 @@ import {
   validateSiteTaskUpdate,
   validateSiteBundle,
   validateTimeEntry,
+  validateTimeEntryCorrection,
+  validateTimeEntryCorrectionDecision,
   validateWorkDate
 } from "../src/validation.mjs";
 
@@ -521,6 +523,37 @@ test("Zeitbuchung validiert UUID, Zeitstempel und Baustellenpflicht", () => {
       recordedAt: "2026-07-17T08:00:00+02:00"
     }),
     /constructionSiteId fehlt/
+  );
+});
+
+test("Zeitkorrekturen verlangen eigene Buchung Uhrzeit Grund und gültige Entscheidung", () => {
+  assert.deepEqual(
+    validateTimeEntryCorrection({
+      originalEntryId: "11111111-1111-4111-8111-111111111111",
+      requestedRecordedAt: "2026-07-17T16:15:00+02:00",
+      reason: "Feierabend versehentlich zu früh gebucht"
+    }),
+    {
+      originalEntryId: "11111111-1111-4111-8111-111111111111",
+      requestedRecordedAt: "2026-07-17T16:15:00+02:00",
+      reason: "Feierabend versehentlich zu früh gebucht"
+    }
+  );
+  assert.deepEqual(
+    validateTimeEntryCorrectionDecision({ decision: "APPROVED" }),
+    { decision: "approved" }
+  );
+  assert.throws(
+    () => validateTimeEntryCorrection({
+      originalEntryId: "11111111-1111-4111-8111-111111111111",
+      requestedRecordedAt: "2026-07-17T16:15:00x",
+      reason: "Zu früh"
+    }),
+    /Zeitzone/
+  );
+  assert.throws(
+    () => validateTimeEntryCorrectionDecision({ decision: "offen" }),
+    /Entscheidung/
   );
 });
 

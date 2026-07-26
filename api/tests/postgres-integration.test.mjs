@@ -1408,12 +1408,71 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
       clientCreatedAt: secondClockOutAt
     })
   });
-  assert.equal(secondClockOut.status, 201, await secondClockOut.text());
+  assert.equal(secondClockOut.status, 201, await secondClockOut.clone().text());
+  const secondClockOutEntry = (await secondClockOut.json()).timeEntry;
 
   const workDate = localDate(clockInAt, config.timeZone);
   const workDay = await fetch(`${baseUrl}/api/v1/work-days/${workDate}`, { headers: { Cookie: cookie } });
   assert.equal(workDay.status, 200);
   assert.equal((await workDay.json()).workDay.entries.length, 4);
+
+  const correctedClockOutAt = new Date(Date.now() - 500).toISOString();
+  const correctionResponse = await fetch(`${baseUrl}/api/v1/time-entry-corrections`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Cookie: cookie },
+    body: JSON.stringify({
+      originalEntryId: secondClockOutEntry.id,
+      requestedRecordedAt: correctedClockOutAt,
+      reason: "Feierabend im Integrationstest versehentlich zu früh gebucht"
+    })
+  });
+  assert.equal(correctionResponse.status, 201, await correctionResponse.clone().text());
+  const correction = (await correctionResponse.json()).timeCorrection;
+  assert.equal(correction.status, "pending");
+  assert.equal(correction.originalEntryId, secondClockOutEntry.id);
+
+  const pendingWorkDayResponse = await fetch(`${baseUrl}/api/v1/work-days/${workDate}`, {
+    headers: { Cookie: cookie }
+  });
+  assert.equal(pendingWorkDayResponse.status, 200);
+  const pendingWorkDay = (await pendingWorkDayResponse.json()).workDay;
+  const pendingOriginal = pendingWorkDay.entries.find((entry) => entry.id === secondClockOutEntry.id);
+  assert.equal(pendingOriginal.recordedAt, secondClockOutAt);
+  assert.equal(pendingOriginal.pendingCorrection.id, correction.id);
+
+  const correctionOverviewResponse = await fetch(
+    `${baseUrl}/api/v1/admin/overview?date=${workDate}`,
+    { headers: { Cookie: plannerCookie } }
+  );
+  assert.equal(correctionOverviewResponse.status, 200);
+  assert.ok(
+    (await correctionOverviewResponse.json()).overview.timeCorrections
+      .some((item) => item.id === correction.id)
+  );
+
+  const approvedCorrectionResponse = await fetch(
+    `${baseUrl}/api/v1/admin/time-entry-corrections/${correction.id}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Cookie: plannerCookie },
+      body: JSON.stringify({ decision: "approved" })
+    }
+  );
+  assert.equal(
+    approvedCorrectionResponse.status,
+    200,
+    await approvedCorrectionResponse.clone().text()
+  );
+  assert.equal((await approvedCorrectionResponse.json()).timeCorrection.status, "approved");
+
+  const correctedWorkDayResponse = await fetch(`${baseUrl}/api/v1/work-days/${workDate}`, {
+    headers: { Cookie: cookie }
+  });
+  assert.equal(correctedWorkDayResponse.status, 200);
+  const correctedWorkDay = (await correctedWorkDayResponse.json()).workDay;
+  assert.equal(correctedWorkDay.entries.length, 4);
+  assert.equal(correctedWorkDay.entries.at(-1).recordedAt, correctedClockOutAt);
+  assert.equal(correctedWorkDay.entries.at(-1).pendingCorrection, null);
 
   const logout = await fetch(`${baseUrl}/api/v1/session`, { method: "DELETE", headers: { Cookie: cookie } });
   assert.equal(logout.status, 200);

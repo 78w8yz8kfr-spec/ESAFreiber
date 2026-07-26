@@ -127,6 +127,13 @@
     workTime: document.querySelector("#work-time"),
     travelTime: document.querySelector("#travel-time"),
     entryList: document.querySelector("#entry-list"),
+    timeCorrectionForm: document.querySelector("#time-correction-form"),
+    timeCorrectionTitle: document.querySelector("#time-correction-title"),
+    timeCorrectionAt: document.querySelector("#time-correction-at"),
+    timeCorrectionReason: document.querySelector("#time-correction-reason"),
+    timeCorrectionSubmit: document.querySelector("#time-correction-submit"),
+    timeCorrectionCancel: document.querySelector("#time-correction-cancel"),
+    timeCorrectionMessage: document.querySelector("#time-correction-message"),
     timesheetSection: document.querySelector("#timesheet-section"),
     showWeek: document.querySelector("#show-week"),
     resetDemo: document.querySelector("#reset-demo"),
@@ -405,13 +412,17 @@
     assignmentReportResponsible: document.querySelector("#assignment-report-responsible"),
     assignmentMessage: document.querySelector("#assignment-message"),
     adminAssignmentList: document.querySelector("#admin-assignment-list"),
+    timeCorrectionReviewPanel: document.querySelector("#time-correction-review-panel"),
+    timeCorrectionReviewCount: document.querySelector("#time-correction-review-count"),
+    timeCorrectionReviewList: document.querySelector("#time-correction-review-list"),
     toast: document.querySelector("#toast")
   };
 
   elements.assignmentPlanningContent.append(
     elements.adminWeek,
     elements.assignmentEditForm,
-    elements.assignmentPanel
+    elements.assignmentPanel,
+    elements.timeCorrectionReviewPanel
   );
   elements.sitePlanningContent.append(
     elements.businessStructurePanel,
@@ -443,6 +454,7 @@
   let session = null;
   let adminState = null;
   let editingAssignmentId = null;
+  let correctingTimeEntryId = null;
   let openedCustomerId = null;
   let openedProjectId = null;
   let openedSiteId = null;
@@ -641,7 +653,7 @@
     elements.passwordState.textContent = demoMode ? "In der Demo inaktiv" : "Sicher verschlüsselt";
     elements.loginSubmit.classList.toggle("button--secondary", demoMode);
     elements.loginSubmit.classList.toggle("button--primary", !demoMode);
-    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.26.1 ${demoMode ? "Demo" : "Online"}`;
+    elements.loginFooter.textContent = `Einfach vor komplex · Version 0.27.0 ${demoMode ? "Demo" : "Online"}`;
 
     if (demoMode) {
       elements.modeNoteText.replaceChildren();
@@ -714,6 +726,7 @@
     elements.projectEditForm.hidden = true;
     elements.siteDashboard.hidden = true;
     elements.siteEditForm.hidden = true;
+    closeTimeCorrectionForm();
     assignmentImportFile = null;
     elements.assignmentImportFile.value = "";
     elements.assignmentImportFileName.textContent = "Keine Datei ausgewählt";
@@ -2098,6 +2111,75 @@
     }
   }
 
+  function renderTimeCorrections() {
+    const corrections = adminState?.timeCorrections || [];
+    elements.timeCorrectionReviewCount.textContent = String(corrections.length);
+    elements.timeCorrectionReviewList.replaceChildren();
+    if (corrections.length === 0) {
+      const empty = document.createElement("li");
+      empty.className = "admin-list__empty";
+      empty.textContent = "Keine Korrektur wartet auf Prüfung.";
+      elements.timeCorrectionReviewList.append(empty);
+      return;
+    }
+
+    corrections.forEach((correction) => {
+      const item = document.createElement("li");
+      const content = document.createElement("div");
+      const title = document.createElement("strong");
+      const meta = document.createElement("span");
+      const reason = document.createElement("span");
+      const actions = document.createElement("div");
+      const approve = document.createElement("button");
+      const reject = document.createElement("button");
+      title.textContent = `${correction.employeeName} · ${timeEntryTypeLabel(correction.entryType)}`;
+      meta.textContent = `${shortDate(correction.workDate)} · ${
+        timeFormatter.format(new Date(correction.originalRecordedAt))
+      } → ${timeFormatter.format(new Date(correction.requestedRecordedAt))} Uhr`;
+      reason.textContent = correction.reason;
+      reason.className = "time-correction-review-reason";
+      content.append(title, meta, reason);
+      actions.className = "time-correction-review-actions";
+      approve.type = "button";
+      approve.className = "text-button";
+      approve.textContent = "Genehmigen";
+      reject.type = "button";
+      reject.className = "text-button text-button--muted";
+      reject.textContent = "Ablehnen";
+
+      const review = async (decision) => {
+        if (
+          decision === "approved"
+          && !window.confirm("Korrektur genehmigen und den Stundenzettel neu berechnen?")
+        ) return;
+        approve.disabled = true;
+        reject.disabled = true;
+        try {
+          await requestJson(
+            `./api/v1/admin/time-entry-corrections/${encodeURIComponent(correction.id)}`,
+            {
+              method: "PATCH",
+              body: JSON.stringify({ decision })
+            }
+          );
+          showToast(decision === "approved"
+            ? "Zeitkorrektur genehmigt · Stundenzettel neu berechnet."
+            : "Zeitkorrektur abgelehnt · Originalzeit bleibt bestehen.");
+          await Promise.all([refreshAdmin(), refreshLiveData()]);
+        } catch (error) {
+          showToast(error.message);
+          approve.disabled = false;
+          reject.disabled = false;
+        }
+      };
+      approve.addEventListener("click", () => void review("approved"));
+      reject.addEventListener("click", () => void review("rejected"));
+      actions.append(approve, reject);
+      item.append(content, actions);
+      elements.timeCorrectionReviewList.append(item);
+    });
+  }
+
   function closeEmployeeEditor() {
     editingEmployeeId = null;
     elements.employeeEditForm.hidden = true;
@@ -2219,6 +2301,7 @@
     renderProjectList();
     renderSiteList();
     renderDocumentList();
+    renderTimeCorrections();
     if (openedSiteId && !elements.siteDashboard.hidden) {
       renderSiteDocuments(openedSiteId);
       renderSiteTasks(openedSiteId);
@@ -3041,6 +3124,42 @@
     return `${labels[entry.type]}${site}`;
   }
 
+  function timeEntryTypeLabel(type) {
+    return {
+      clock_in: "Arbeitsbeginn",
+      site_arrival: "Ankunft Baustelle",
+      site_departure: "Abfahrt Baustelle",
+      next_site: "Wechsel zur nächsten Baustelle",
+      clock_out: "Feierabend"
+    }[type] || type;
+  }
+
+  function localDateTimeInputValue(instant) {
+    const date = new Date(instant);
+    const offset = date.getTimezoneOffset() * 60_000;
+    return new Date(date.valueOf() - offset).toISOString().slice(0, 16);
+  }
+
+  function closeTimeCorrectionForm() {
+    correctingTimeEntryId = null;
+    elements.timeCorrectionForm.reset();
+    elements.timeCorrectionForm.hidden = true;
+    elements.timeCorrectionMessage.textContent = "";
+  }
+
+  function openTimeCorrectionForm(entry) {
+    if (demoMode || entry.pendingSync || entry.syncError || entry.pendingCorrection) return;
+    correctingTimeEntryId = entry.id;
+    elements.timeCorrectionTitle.textContent =
+      `${timeEntryTypeLabel(entry.type)} · ${timeFormatter.format(new Date(entry.recordedAt))} Uhr`;
+    elements.timeCorrectionAt.value = localDateTimeInputValue(entry.recordedAt);
+    elements.timeCorrectionReason.value = "";
+    elements.timeCorrectionMessage.textContent = "";
+    elements.timeCorrectionForm.hidden = false;
+    elements.timeCorrectionForm.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => elements.timeCorrectionAt.focus(), 250);
+  }
+
   function renderEntries() {
     elements.entryList.replaceChildren();
     if (state.events.length === 0) {
@@ -3057,14 +3176,28 @@
       const content = document.createElement("div");
       const label = document.createElement("strong");
       const meta = document.createElement("span");
+      const correction = document.createElement("button");
       marker.setAttribute("aria-hidden", "true");
       label.textContent = entryLabel(entry);
       const status = demoMode
         ? "lokal vorgemerkt"
         : entry.syncError ? "Synchronisation prüfen" : entry.pendingSync ? "wartet auf Synchronisation" : "synchronisiert";
-      meta.textContent = `${timeFormatter.format(new Date(entry.recordedAt))} · ${status}`;
+      meta.textContent = `${timeFormatter.format(new Date(entry.recordedAt))} · ${
+        entry.pendingCorrection ? "Korrektur wartet auf Prüfung" : status
+      }`;
       content.append(label, meta);
-      item.append(marker, content);
+      correction.type = "button";
+      correction.className = "entry-correction-button";
+      correction.textContent = entry.pendingCorrection ? "Angefragt" : "Korrigieren";
+      correction.disabled = Boolean(
+        demoMode
+        || entry.pendingSync
+        || entry.syncError
+        || entry.pendingCorrection
+      );
+      correction.hidden = demoMode;
+      correction.addEventListener("click", () => openTimeCorrectionForm(entry));
+      item.append(marker, content, correction);
       elements.entryList.append(item);
     });
   }
@@ -3135,6 +3268,7 @@
 
   function showDashboardPane(pane, smooth = true) {
     if (pane !== "start") closeMobileReportForm();
+    if (pane !== "start") closeTimeCorrectionForm();
     const adminPanes = new Set(["assignments", "sites", "more"]);
     elements.dashboardPanes.forEach((element) => {
       if (element === elements.adminSection) {
@@ -3186,6 +3320,7 @@
       recordedAt: entry.recordedAt,
       constructionSiteId: entry.constructionSiteId,
       siteIndex: siteIndexForId(entry.constructionSiteId),
+      pendingCorrection: entry.pendingCorrection || null,
       pendingSync: false,
       syncError: null
     }));
@@ -4396,6 +4531,48 @@
     event.preventDefault();
     void createEmployeeSiteNote();
   });
+  elements.timeCorrectionForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!correctingTimeEntryId) return;
+    if (!navigator.onLine) {
+      elements.timeCorrectionMessage.textContent =
+        "Eine Korrektur kann gesendet werden, sobald wieder eine Verbindung besteht.";
+      return;
+    }
+    const requestedRecordedAt = new Date(elements.timeCorrectionAt.value);
+    const reason = elements.timeCorrectionReason.value.trim();
+    if (Number.isNaN(requestedRecordedAt.valueOf())) {
+      elements.timeCorrectionMessage.textContent = "Bitte Datum und Uhrzeit vollständig eingeben.";
+      return;
+    }
+    if (reason.length < 5) {
+      elements.timeCorrectionMessage.textContent = "Bitte einen kurzen Korrekturgrund eingeben.";
+      return;
+    }
+    elements.timeCorrectionSubmit.disabled = true;
+    elements.timeCorrectionCancel.disabled = true;
+    elements.timeCorrectionMessage.textContent = "Korrektur wird sicher eingereicht …";
+    try {
+      await requestJson("./api/v1/time-entry-corrections", {
+        method: "POST",
+        body: JSON.stringify({
+          originalEntryId: correctingTimeEntryId,
+          requestedRecordedAt: requestedRecordedAt.toISOString(),
+          reason
+        })
+      });
+      closeTimeCorrectionForm();
+      await Promise.all([refreshLiveData(), refreshAdmin()]);
+      showToast("Korrektur eingereicht · bis zur Prüfung bleibt die Originalzeit bestehen.");
+    } catch (error) {
+      if (error.status === 401) showLogin();
+      else elements.timeCorrectionMessage.textContent = error.message;
+    } finally {
+      elements.timeCorrectionSubmit.disabled = false;
+      elements.timeCorrectionCancel.disabled = false;
+    }
+  });
+  elements.timeCorrectionCancel.addEventListener("click", closeTimeCorrectionForm);
   elements.showWeek.addEventListener("click", () => {
     showDashboardPane("week");
   });

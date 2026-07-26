@@ -1,7 +1,7 @@
 # Sprint 2: Planung und Zeiterfassung
 
-Stand: 17.07.2026  
-Technischer Stand: V0.5-dev
+Stand: 26.07.2026
+Technischer Stand: V0.27.0
 
 Dieses Dokument beschreibt die verbindlichen Regeln der Migrationen 009 bis
 012. Der Sprint verbindet Wochenplanung, Vorarbeiterverantwortung,
@@ -96,6 +96,13 @@ erhalten; anschließend wird der Arbeitstag neu berechnet. Ablehnungen bleiben
 ebenfalls mit Prüfer und Zeitpunkt nachvollziehbar. Die View
 `pending_time_entry_corrections` liefert offene Anträge für die Organisationsansicht und
 der Datenbankkanal `schaefchen_time_correction` bereitet Benachrichtigungen vor.
+
+Die produktive PWA stellt den Ablauf direkt am eigenen synchronisierten
+Stundenzettel bereit. Offene Anträge zeigen weiterhin die Originalzeit; die
+Einsatzplanung listet alte Uhrzeit, gewünschte Uhrzeit und Begründung. Vor
+einer Genehmigung prüft die API die vollständige Zeit- und Baustellenfolge
+erneut, damit zwischenzeitliche Buchungen keinen ungültigen Tagesablauf
+erzeugen.
 
 ## Öffentliche PWA-Demo
 

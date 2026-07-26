@@ -4,6 +4,15 @@ Alle wesentlichen Änderungen an Schäfchen werden in dieser Datei dokumentiert.
 
 ## [Unreleased]
 
+### V0.27.0 – Nachvollziehbare Zeitkorrekturen
+
+- Mitarbeiter können eine synchronisierte eigene Zeitbuchung direkt im Stundenzettel mit neuer Uhrzeit und Pflichtbegründung zur Prüfung einreichen
+- bis zur Entscheidung bleibt ausschließlich die unveränderte Originalzeit wirksam
+- offene Korrekturen erscheinen mit alter und gewünschter Uhrzeit direkt in der Einsatzplanung
+- Planung und Geschäftsführung können Anträge genehmigen oder ablehnen; Genehmigungen entwerten das Original historisch und berechnen den Stundenzettel neu
+- API prüft Mandant, Eigentümer, Arbeitstag, Zeitreihenfolge und Baustellenfolge vor Antrag und Genehmigung
+- Validierungs-, PostgreSQL-Integrations- und PWA-Smoke-Tests sichern den vollständigen Ablauf
+
 ### V0.26.1 – Modulumfang auf VDE und DGUV begrenzt
 
 - LWL und KNX vollständig aus API, Modulplanung und aktueller Produktdokumentation entfernt

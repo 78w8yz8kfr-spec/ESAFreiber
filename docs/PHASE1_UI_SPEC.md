@@ -78,5 +78,12 @@ API stellt mindestens folgende Endpunkte bereit, bevor der Login produktiv wird:
 - `POST /api/v1/time-entries` – Client-ID idempotent synchronisieren
 - `GET /api/v1/work-days/{date}` – berechneten Tagesstand laden
 - `POST /api/v1/time-entry-corrections` – begründete Korrektur beantragen
+- `PATCH /api/v1/admin/time-entry-corrections/{id}` – Korrektur genehmigen oder ablehnen
+
+Im Online-Modus besitzt jede bereits synchronisierte Buchung eine kompakte
+Korrekturaktion. Der Mitarbeiter gibt die richtige Uhrzeit und einen Grund an;
+die ursprüngliche Buchung bleibt bis zur Entscheidung sichtbar und wirksam.
+Offene Anträge erscheinen in der Einsatzplanung und zeigen der berechtigten
+Organisation alte Uhrzeit, neue Uhrzeit und Begründung.
 
 Passwörter, Passwort-Hashes und `company_id` werden nie vom Frontend verwaltet.

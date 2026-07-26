@@ -8,9 +8,9 @@
     <title>Schäfchen</title>
     <link rel="icon" href="./assets/mark.svg" type="image/svg+xml">
     <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="stylesheet" href="./styles.css?v=0.26.1">
-    <script src="./app.js?v=0.26.1" defer></script>
-    <script src="./version.js?v=0.26.1" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=0.27.0">
+    <script src="./app.js?v=0.27.0" defer></script>
+    <script src="./version.js?v=0.27.0" defer></script>
   </head>
   <body>
     <main id="app" class="app-shell">
@@ -124,7 +124,7 @@
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
           </button>
 
-          <p id="login-footer" class="login-footer">Einfach vor komplex · Version 0.26.1</p>
+          <p id="login-footer" class="login-footer">Einfach vor komplex · Version 0.27.0</p>
         </div>
       </section>
 
@@ -410,6 +410,29 @@
             <ol id="entry-list" class="entry-list" aria-label="Lokale Zeitbuchungen">
               <li class="entry-list__empty">Noch keine Buchung.</li>
             </ol>
+            <form id="time-correction-form" class="time-correction-form" novalidate hidden>
+              <div class="time-correction-form__heading">
+                <div>
+                  <p class="eyebrow">Historisch nachvollziehbar</p>
+                  <strong id="time-correction-title">Buchung korrigieren</strong>
+                </div>
+                <button id="time-correction-cancel" class="text-button" type="button">Abbrechen</button>
+              </div>
+              <label for="time-correction-at">Richtige Uhrzeit</label>
+              <input id="time-correction-at" type="datetime-local" step="60" required>
+              <label for="time-correction-reason">Begründung</label>
+              <textarea
+                id="time-correction-reason"
+                maxlength="500"
+                rows="3"
+                placeholder="z. B. Feierabend versehentlich zu früh gebucht"
+                required
+              ></textarea>
+              <button id="time-correction-submit" class="button button--primary" type="submit">
+                Korrektur zur Prüfung senden
+              </button>
+              <p id="time-correction-message" class="form-message" aria-live="polite"></p>
+            </form>
           </section>
 
           <section id="week-section" class="section" data-dashboard-pane="week" aria-labelledby="week-title" hidden>
@@ -1281,6 +1304,17 @@
               </form>
               <ul id="admin-assignment-list" class="admin-list" aria-label="Freigegebene Einsätze"></ul>
             </details>
+
+            <section id="time-correction-review-panel" class="site-management-panel time-correction-review-panel" aria-labelledby="time-correction-review-title">
+              <div class="site-management-panel__heading">
+                <div>
+                  <p class="eyebrow">Stundenzettel prüfen</p>
+                  <h3 id="time-correction-review-title">Offene Zeitkorrekturen</h3>
+                </div>
+                <span id="time-correction-review-count" class="site-list-summary" aria-live="polite">0</span>
+              </div>
+              <ul id="time-correction-review-list" class="admin-list time-correction-review-list" aria-label="Offene Zeitkorrekturen"></ul>
+            </section>
           </section>
 
           <aside class="info-card" data-dashboard-pane="more" hidden>
