@@ -300,8 +300,8 @@ async function getWorkDay(client, context, date) {
 
   const day = dayResult.rows[0];
   const entries = await client.query(
-    `SELECT id, work_day_id, client_entry_id, entry_type, recorded_at,
-            client_created_at, construction_site_id,
+    `SELECT entry.id, entry.work_day_id, entry.client_entry_id, entry.entry_type,
+            entry.recorded_at, entry.client_created_at, entry.construction_site_id,
             pending.id AS pending_correction_id,
             pending.recorded_at AS pending_requested_recorded_at,
             pending.correction_reason AS pending_correction_reason,
