@@ -13,7 +13,11 @@ DECLARE
     report_id UUID;
 BEGIN
     SELECT id INTO tenant_id FROM companies WHERE company_number = 'F-000001';
-    SELECT id INTO author_id FROM users WHERE company_id = tenant_id ORDER BY created_at LIMIT 1;
+    INSERT INTO users (
+        company_id, personnel_number, first_name, last_name
+    ) VALUES (
+        tenant_id, 'REPORT-STRUCTURE', 'Struktur', 'Test'
+    ) RETURNING id INTO author_id;
 
     INSERT INTO customers (company_id, customer_type, company_name)
     VALUES (tenant_id, 'company', 'Strukturbericht Testkunde GmbH')
