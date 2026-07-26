@@ -333,7 +333,7 @@ async function getWorkWeek(client, context, weekStart) {
   if (start.getUTCDay() !== 1) {
     throw new InputError("Der Wochenbeginn muss ein Montag sein.", 400, "invalid_week_start");
   }
-  for (let offset = 0; offset < 5; offset += 1) {
+  for (let offset = 0; offset < 7; offset += 1) {
     const date = new Date(start);
     date.setUTCDate(start.getUTCDate() + offset);
     const workDate = date.toISOString().slice(0, 10);

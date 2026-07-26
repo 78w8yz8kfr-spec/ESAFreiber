@@ -112,7 +112,7 @@ API setzt beide Werte ausschließlich selbst.
 | `GET` | `/api/v1/session` | Eigene Firma, Person, Rollen und Ablaufzeit lesen |
 | `DELETE` | `/api/v1/session` | Aktuelle Sitzung widerrufen |
 | `GET` | `/api/v1/work-days/:date` | Eigenen berechneten Arbeitstag und Ereignisse lesen |
-| `GET` | `/api/v1/work-weeks/:monday` | Eigene fünf Arbeitstage mit wirksamen Buchungen und Summen lesen |
+| `GET` | `/api/v1/work-weeks/:monday` | Eigene sieben Kalendertage mit wirksamen Buchungen und Summen lesen |
 | `GET` | `/api/v1/site-assignments/:date` | Eigene freigegebene Tageseinsätze lesen |
 | `POST` | `/api/v1/site-reports` | Mobilen Bericht idempotent erfassen; nur für den berichtspflichtig eingeteilten Vorarbeiter |
 | `POST` | `/api/v1/time-entries` | Offline-Zeitereignis idempotent synchronisieren |

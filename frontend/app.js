@@ -3234,8 +3234,8 @@
       ? weekState
       : {
           weekStart,
-          weekEnd: addIsoDays(weekStart, 4),
-          days: Array.from({ length: 5 }, (_, offset) => {
+          weekEnd: addIsoDays(weekStart, 6),
+          days: Array.from({ length: 7 }, (_, offset) => {
             const workDate = addIsoDays(weekStart, offset);
             return workDate === fallbackDay.workDate ? fallbackDay : { workDate, workDay: null };
           }),

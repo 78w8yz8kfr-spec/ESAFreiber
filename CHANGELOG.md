@@ -7,11 +7,11 @@ Alle wesentlichen Änderungen an Schäfchen werden in dieser Datei dokumentiert.
 ### V0.28.0 – Wochen-Stundenzettel
 
 - neuer vollständiger Wochen-Stundenzettel mit Arbeit, Pause und Fahrt als Wochensumme
-- Montag bis Freitag werden als ruhige Tageskarten mit Status, Tageswerten und allen einzelnen Buchungen dargestellt
+- Montag bis Sonntag werden als ruhige Tageskarten mit Status, Tageswerten und allen einzelnen Buchungen dargestellt
 - Zeitkorrekturen bleiben erhalten, werden aber ausschließlich an der passenden Buchung im Wochen-Stundenzettel geöffnet
 - Korrekturen erscheinen als kompakte mobile Eingabefläche; bis zur Prüfung bleibt die bisherige Uhrzeit sichtbar
 - offene Korrekturen liegen für berechtigte Bürorollen direkt im Bereich Woche statt in der Einsatzplanung
-- neuer geschützter Wochenendpunkt liefert die eigenen fünf Arbeitstage einschließlich wirksamer Buchungen und Wochensummen
+- neuer geschützter Wochenendpunkt liefert die eigenen sieben Kalendertage einschließlich wirksamer Buchungen und Wochensummen
 
 ### V0.27.0 – Nachvollziehbare Zeitkorrekturen
 

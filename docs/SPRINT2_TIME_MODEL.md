@@ -8,7 +8,7 @@ Dieses Dokument beschreibt die verbindlichen Regeln der Migrationen 009 bis
 Offline-Zeitereignisse und den berechneten Stundenzettel.
 
 Die PWA stellt den berechneten Stundenzettel zusätzlich als vollständige
-Arbeitswoche dar. `GET /api/v1/work-weeks/{montag}` liefert Montag bis Freitag,
+Arbeitswoche dar. `GET /api/v1/work-weeks/{montag}` liefert Montag bis Sonntag,
 die wirksamen eigenen Buchungen und die Summen für Brutto, Pause, Arbeit,
 Fahrt und Mehrzeit. Eine Korrektur wird direkt an der betreffenden
 Wochenbuchung begonnen; der laufende Arbeitstag bleibt dadurch ruhig.

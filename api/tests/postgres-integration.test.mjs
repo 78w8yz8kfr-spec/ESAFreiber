@@ -1426,7 +1426,7 @@ integrationTest("Login, Sitzung und idempotente Offline-Zeitbuchung funktioniere
   assert.equal(workWeekResponse.status, 200);
   const workWeek = (await workWeekResponse.json()).week;
   assert.equal(workWeek.weekStart, weekStart);
-  assert.equal(workWeek.days.length, 5);
+  assert.equal(workWeek.days.length, 7);
   assert.ok(workWeek.days.some((day) => day.workDate === workDate && day.workDay.entries.length === 4));
   assert.ok(workWeek.totals.workMinutes >= 0);
 
