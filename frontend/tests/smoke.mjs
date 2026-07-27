@@ -13,6 +13,7 @@ const [
   styles,
   app,
   worker,
+  versionScript,
   refreshHtml,
   refreshScript,
   manifestSource,
@@ -26,6 +27,7 @@ const [
   readFrontendFile("styles.css"),
   readFrontendFile("app.js"),
   readFrontendFile("sw.js"),
+  readFrontendFile("version.js"),
   readFrontendFile("refresh.html"),
   readFrontendFile("refresh.js"),
   readFrontendFile("manifest.webmanifest"),
@@ -39,8 +41,6 @@ const [
 const manifest = JSON.parse(manifestSource);
 
 assert.match(html, /lang="de"/);
-assert.match(html, /<title>ESA<\/title>/);
-assert.match(html, /ESA – Zeiterfassung, Baustellen- und Mitarbeiterplanung/);
 assert.match(html, /id="login-view"/);
 assert.match(html, /id="dashboard-view"/);
 assert.match(html, /id="timesheet-section"/);
@@ -53,11 +53,18 @@ assert.match(html, /id="employee-edit-form"/);
 assert.match(html, /id="assignment-import-panel"/);
 assert.match(html, /id="site-import-panel"/);
 assert.match(html, /baustellen-import-vorlage\.xlsx/);
-assert.match(html, /esa-config\.js\?v=0\.29\.0/);
 assert.match(html, /styles\.css\?v=0\.29\.0/);
 assert.match(html, /app\.js\?v=0\.29\.0/);
 assert.match(html, /version\.js\?v=0\.29\.0/);
 assert.doesNotMatch(html, /https?:\/\//, "Die PWA darf keine externen Laufzeitressourcen laden");
+
+assert.match(versionScript, /document\.title = "ESA"/);
+assert.match(versionScript, /ESA – Zeiterfassung und Einsatzplanung/);
+assert.match(versionScript, /\.\/esa-config\.js\?v=/);
+assert.match(versionScript, /MutationObserver/);
+assert.match(versionScript, /mobile-report-card/);
+assert.match(versionScript, /bautagesbericht/);
+assert.match(versionScript, /montagebericht/);
 
 assert.match(styles, /env\(safe-area-inset-bottom\)/);
 assert.match(styles, /:focus-visible/);
@@ -108,14 +115,14 @@ assert.equal(siteTemplate[1], 0x4b);
 for (const asset of [
   "./index.html",
   "./manifest.webmanifest",
-  "./esa-config.js?v=0.29.0",
+  "./esa-config.js?v=0.29.0-esa.1",
   "./assets/mark.svg",
   "./assets/company-logos/schaaf-elektro.webp",
   "./assets/baustellen-import-vorlage.xlsx"
 ]) {
   assert.ok(worker.includes(`"${asset}"`), `${asset} fehlt im App-Shell-Cache`);
 }
-assert.match(worker, /const CACHE_NAME = "esa-online-v29"/);
+assert.match(worker, /const CACHE_NAME = "esa-online-v29-1"/);
 assert.ok(worker.includes('"./styles.css?v=0.29.0"'));
 assert.ok(worker.includes('"./app.js?v=0.29.0"'));
 assert.ok(worker.includes('"./version.js?v=0.29.0"'));
