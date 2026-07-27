@@ -1,158 +1,28 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#e30613">
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
-  <title>ESA Zeiterfassung</title>
-  <style>
-    :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;background:#f5f5f7}
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(180deg,#fff 0,#f5f5f7 100%)}
-    main{max-width:520px;margin:0 auto;padding:24px 18px 48px}.card{background:#fff;border-radius:28px;padding:24px;box-shadow:0 18px 48px rgba(0,0,0,.10);margin-bottom:18px}
-    .brand{display:flex;align-items:center;gap:16px}.logo{width:64px;height:64px;border-radius:18px;background:#111;color:#fff;display:grid;place-items:center;font-weight:800;font-size:24px}.eyebrow{letter-spacing:.16em;text-transform:uppercase;color:#6e6e73;font-weight:700;margin:0 0 4px}.brand h1{font-size:38px;margin:0}.muted{color:#6e6e73}.status{font-size:30px;font-weight:800;margin:8px 0}.time{font-variant-numeric:tabular-nums;font-size:52px;font-weight:800;margin:8px 0 18px}
-    button,select,input{width:100%;font:inherit;border-radius:18px;border:1px solid #d2d2d7;padding:16px}button{border:0;background:#e30613;color:#fff;font-weight:800;font-size:20px;min-height:58px;touch-action:manipulation}button.secondary{background:#f2f2f7;color:#111;margin-top:12px}button.small{width:auto;min-height:48px;padding:10px 16px;font-size:18px}button:disabled{opacity:.45}button:active{transform:scale(.99)}
-    label{display:block;font-weight:700;margin:14px 0 8px}.row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}.entry{display:flex;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid #ececf0}.entry:last-child{border-bottom:0}.entry small{display:block;color:#6e6e73;margin-top:4px}.badge{display:inline-block;background:#fff0f0;color:#b60000;border-radius:999px;padding:6px 10px;font-weight:700}.suggestion{padding:14px;border-radius:18px;background:#f7f7f9;margin:12px 0}.suggestion strong{display:block;margin-bottom:4px}.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}.stat{background:#f7f7f9;border-radius:18px;padding:16px}.stat span{display:block;color:#6e6e73;font-size:14px}.stat strong{font-size:24px;font-variant-numeric:tabular-nums}.hidden{display:none!important}
-  </style>
-</head>
-<body>
-<main>
-  <section class="card">
-    <div class="brand"><div class="logo">ESA</div><div><p class="eyebrow">Zeiterfassung</p><h1>ESA</h1></div></div>
-    <p class="muted">Stabile mobile Testversion.</p>
-  </section>
-
-  <section class="card">
-    <span class="badge" id="stateBadge">Nicht gestartet</span>
-    <p class="status" id="stateTitle">Arbeitstag bereit</p>
-    <div class="time" id="elapsed">00:00:00</div>
-
-    <div class="suggestion">
-      <strong>Heute vorgeschlagen</strong>
-      <span id="suggestedSite">ESA Freiberg – Hauptbaustelle</span>
-      <button id="useSuggested" class="secondary" type="button">Vorschlag übernehmen</button>
-    </div>
-
-    <div class="row">
-      <div>
-        <label for="site">Baustelle</label>
-        <select id="site"></select>
-      </div>
-      <button id="addSite" class="small secondary" type="button" aria-label="Neue Baustelle anlegen">＋</button>
-    </div>
-
-    <div id="newSiteBox" class="hidden">
-      <label for="newSiteName">Neue Baustelle</label>
-      <input id="newSiteName" placeholder="Name oder Adresse">
-      <button id="saveSite" class="secondary" type="button">Baustelle speichern</button>
-    </div>
-
-    <button id="startStop" type="button">Arbeitsblock starten</button>
-    <button id="pause" class="secondary" type="button" disabled>Pause beginnen</button>
-  </section>
-
-  <section class="card">
-    <p class="eyebrow">Heute</p>
-    <h2>Tagesübersicht</h2>
-    <div class="stats">
-      <div class="stat"><span>Arbeitszeit netto</span><strong id="dayWork">00:00</strong></div>
-      <div class="stat"><span>Pausen</span><strong id="dayPause">00:00</strong></div>
-      <div class="stat"><span>Arbeitsblöcke</span><strong id="blockCount">0</strong></div>
-      <div class="stat"><span>Baustellen</span><strong id="siteCount">0</strong></div>
-    </div>
-    <h2>Buchungen</h2>
-    <div id="entries"><p class="muted">Noch keine Buchung.</p></div>
-    <button id="reset" class="secondary" type="button">Testdaten zurücksetzen</button>
-  </section>
-</main>
-<script>
-(() => {
-  'use strict';
-  const key='esa.standalone.v3';
-  const $=id=>document.getElementById(id);
-  const defaults={
-    running:false,paused:false,currentBlock:null,
-    blocks:[],entries:[],
-    sites:['ESA Freiberg – Hauptbaustelle','Baustelle Musterstraße'],
-    selectedSite:'ESA Freiberg – Hauptbaustelle'
-  };
-  let state={...defaults,...JSON.parse(localStorage.getItem(key)||'{}')};
-  state.blocks=Array.isArray(state.blocks)?state.blocks:[];
-  state.entries=Array.isArray(state.entries)?state.entries:[];
-  state.sites=Array.isArray(state.sites)&&state.sites.length?state.sites:defaults.sites;
-  const save=()=>localStorage.setItem(key,JSON.stringify(state));
-  const fmt=t=>new Date(t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-  const duration=ms=>{const s=Math.floor(Math.max(ms,0)/1000);return [Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(v=>String(v).padStart(2,'0')).join(':')};
-  const shortDuration=ms=>{const m=Math.floor(Math.max(ms,0)/60000);return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`};
-
-  function currentPauseMs(){
-    if(!state.currentBlock)return 0;
-    return state.currentBlock.pauseMs+(state.paused&&state.currentBlock.pauseStartedAt?Date.now()-state.currentBlock.pauseStartedAt:0);
-  }
-  function currentWorkMs(){
-    if(!state.currentBlock)return 0;
-    return Math.max(Date.now()-state.currentBlock.startedAt-currentPauseMs(),0);
-  }
-  function blockWorkMs(block){return Math.max((block.endedAt-block.startedAt)-block.pauseMs,0)}
-  function totalWorkMs(){return state.blocks.reduce((sum,b)=>sum+blockWorkMs(b),0)+(state.running?currentWorkMs():0)}
-  function totalPauseMs(){return state.blocks.reduce((sum,b)=>sum+b.pauseMs,0)+(state.running?currentPauseMs():0)}
-
-  function renderSites(){
-    const previous=state.selectedSite;
-    $('site').innerHTML=state.sites.map(name=>`<option value="${name.replace(/"/g,'&quot;')}">${name}</option>`).join('');
-    $('site').value=state.sites.includes(previous)?previous:state.sites[0];
-    state.selectedSite=$('site').value;
-  }
-
-  function render(){
-    $('elapsed').textContent=duration(state.running?currentWorkMs():0);
-    $('startStop').textContent=state.running?'Arbeitsblock beenden':'Arbeitsblock starten';
-    $('pause').disabled=!state.running;
-    $('pause').textContent=state.paused?'Pause beenden':'Pause beginnen';
-    $('site').disabled=state.running;
-    $('addSite').disabled=state.running;
-    $('useSuggested').disabled=state.running;
-    $('stateBadge').textContent=state.running?(state.paused?'Pause':'Läuft'):'Nicht gestartet';
-    $('stateTitle').textContent=state.running?(state.paused?'Pause aktiv':state.currentBlock.site):'Neuen Arbeitsblock starten';
-    $('dayWork').textContent=shortDuration(totalWorkMs());
-    $('dayPause').textContent=shortDuration(totalPauseMs());
-    $('blockCount').textContent=String(state.blocks.length+(state.running?1:0));
-    const usedSites=new Set(state.blocks.map(b=>b.site));if(state.currentBlock)usedSites.add(state.currentBlock.site);
-    $('siteCount').textContent=String(usedSites.size);
-    $('entries').innerHTML=state.entries.length?state.entries.slice().reverse().map(e=>`<div class="entry"><div><strong>${e.label}</strong><small>${e.site||''}</small></div><span>${fmt(e.at)}</span></div>`).join(''):'<p class="muted">Noch keine Buchung.</p>';
-  }
-
-  $('site').addEventListener('change',()=>{state.selectedSite=$('site').value;save();});
-  $('useSuggested').addEventListener('click',()=>{state.selectedSite=$('suggestedSite').textContent;$('site').value=state.selectedSite;save();render();});
-  $('addSite').addEventListener('click',()=>{$('newSiteBox').classList.toggle('hidden');if(!$('newSiteBox').classList.contains('hidden'))$('newSiteName').focus();});
-  $('saveSite').addEventListener('click',()=>{const name=$('newSiteName').value.trim();if(!name)return;if(!state.sites.includes(name))state.sites.push(name);state.selectedSite=name;$('newSiteName').value='';$('newSiteBox').classList.add('hidden');renderSites();save();render();});
-
-  $('startStop').addEventListener('click',()=>{
-    const now=Date.now();
-    if(!state.running){
-      state.running=true;state.paused=false;
-      state.currentBlock={startedAt:now,endedAt:null,pauseMs:0,pauseStartedAt:null,site:state.selectedSite};
-      state.entries.push({label:'Arbeitsblock begonnen',site:state.selectedSite,at:now});
-    }else{
-      if(state.paused&&state.currentBlock.pauseStartedAt){state.currentBlock.pauseMs+=now-state.currentBlock.pauseStartedAt;}
-      state.currentBlock.endedAt=now;state.currentBlock.pauseStartedAt=null;
-      state.blocks.push({...state.currentBlock});
-      state.entries.push({label:'Arbeitsblock beendet',site:state.currentBlock.site,at:now});
-      state.running=false;state.paused=false;state.currentBlock=null;
-    }
-    save();render();
-  });
-
-  $('pause').addEventListener('click',()=>{
-    if(!state.running)return;const now=Date.now();
-    if(!state.paused){state.paused=true;state.currentBlock.pauseStartedAt=now;state.entries.push({label:'Pause begonnen',site:state.currentBlock.site,at:now});}
-    else{state.currentBlock.pauseMs+=now-state.currentBlock.pauseStartedAt;state.paused=false;state.currentBlock.pauseStartedAt=null;state.entries.push({label:'Pause beendet',site:state.currentBlock.site,at:now});}
-    save();render();
-  });
-
-  $('reset').addEventListener('click',()=>{if(confirm('Alle lokalen Testdaten löschen?')){localStorage.removeItem(key);location.reload();}});
-  renderSites();setInterval(render,1000);render();
-})();
-</script>
-</body>
-</html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#e30613"><meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate"><title>ESA Zeiterfassung</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;background:#f5f5f7}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(180deg,#fff,#f5f5f7)}main{max-width:560px;margin:auto;padding:24px 18px 48px}.card{background:#fff;border-radius:28px;padding:24px;box-shadow:0 18px 48px rgba(0,0,0,.1);margin-bottom:18px}.brand{display:flex;align-items:center;gap:16px}.logo{width:64px;height:64px;border-radius:18px;background:#111;color:#fff;display:grid;place-items:center;font-weight:800;font-size:24px}.eyebrow{letter-spacing:.16em;text-transform:uppercase;color:#6e6e73;font-weight:700;margin:0 0 4px}h1{font-size:38px;margin:0}.muted{color:#6e6e73}.status{font-size:30px;font-weight:800;margin:8px 0}.time{font-variant-numeric:tabular-nums;font-size:52px;font-weight:800;margin:8px 0 18px}button,select,input,textarea{width:100%;font:inherit;border-radius:18px;border:1px solid #d2d2d7;padding:16px}textarea{min-height:90px;resize:vertical}button{border:0;background:#e30613;color:#fff;font-weight:800;font-size:19px;min-height:58px}button.secondary{background:#f2f2f7;color:#111;margin-top:12px}button.dark{background:#111}button.small{width:auto;min-height:48px;padding:10px 16px;font-size:18px}button:disabled{opacity:.45}label{display:block;font-weight:700;margin:14px 0 8px}.row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}.stat{background:#f7f7f9;border-radius:18px;padding:16px}.stat span{display:block;color:#6e6e73;font-size:14px}.stat strong{font-size:23px;font-variant-numeric:tabular-nums}.badge{display:inline-block;background:#fff0f0;color:#b60000;border-radius:999px;padding:6px 10px;font-weight:700}.suggestion,.panel{padding:14px;border-radius:18px;background:#f7f7f9;margin:12px 0}.timeline{position:relative;margin-left:8px}.event{display:grid;grid-template-columns:34px 1fr auto;gap:10px;padding:14px 0;border-bottom:1px solid #ececf0}.event:last-child{border-bottom:0}.icon{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#f2f2f7}.event small{display:block;color:#6e6e73;margin-top:4px}.correction{padding:14px 0;border-bottom:1px solid #ececf0}.hidden{display:none!important}
+</style></head>
+<body><main>
+<section class="card"><div class="brand"><div class="logo">ESA</div><div><p class="eyebrow">Zeiterfassung</p><h1>ESA</h1></div></div><p class="muted">Mobile Testversion – Daten werden lokal gespeichert.</p></section>
+<section class="card"><span class="badge" id="stateBadge">Nicht gestartet</span><p class="status" id="stateTitle">Arbeitstag bereit</p><div class="time" id="elapsed">00:00:00</div>
+<div class="suggestion"><strong>Heute vorgeschlagen</strong><div id="suggestedSite">ESA Freiberg – Hauptbaustelle</div><button id="useSuggested" class="secondary">Vorschlag übernehmen</button></div>
+<div class="row"><div><label for="site">Baustelle</label><select id="site"></select></div><button id="addSite" class="small secondary">＋</button></div>
+<div id="newSiteBox" class="hidden"><label for="newSiteName">Neue Baustelle</label><input id="newSiteName" placeholder="Name oder Adresse"><button id="saveSite" class="secondary">Baustelle speichern</button></div>
+<button id="startStop">Arbeitsblock starten</button><button id="pause" class="secondary" disabled>Pause beginnen</button><button id="travel" class="dark" disabled>Baustelle wechseln</button>
+<div id="travelBox" class="hidden panel"><strong id="travelTitle">Fahrt läuft</strong><div class="time" id="travelTime" style="font-size:36px">00:00:00</div><label for="travelSite">Zielbaustelle</label><select id="travelSite"></select><button id="arrive">Ankunft bestätigen</button></div></section>
+<section class="card"><p class="eyebrow">Heute</p><h2>Tagesübersicht</h2><div class="stats"><div class="stat"><span>Arbeitszeit netto</span><strong id="dayWork">00:00</strong></div><div class="stat"><span>Pausen</span><strong id="dayPause">00:00</strong></div><div class="stat"><span>Fahrzeit</span><strong id="dayTravel">00:00</strong></div><div class="stat"><span>Anwesenheit</span><strong id="dayPresence">00:00</strong></div></div><h2>Zeitstrahl</h2><div id="entries" class="timeline"><p class="muted">Noch keine Buchung.</p></div></section>
+<section class="card"><p class="eyebrow">Korrektur</p><h2>Zeitkorrektur beantragen</h2><label for="correctionTime">Gewünschte Uhrzeit</label><input id="correctionTime" type="time"><label for="correctionReason">Grund</label><select id="correctionReason"><option>Arbeitsbeginn vergessen</option><option>Feierabend vergessen</option><option>Pause falsch erfasst</option><option>Baustelle falsch gewählt</option><option>Sonstiges</option></select><label for="correctionComment">Kommentar</label><textarea id="correctionComment" placeholder="Kurze Begründung"></textarea><button id="submitCorrection">Antrag senden</button><div id="corrections"></div><button id="reset" class="secondary">Testdaten zurücksetzen</button></section>
+</main><script>
+(()=>{'use strict';const key='esa.standalone.v4',$=id=>document.getElementById(id),defaults={running:false,paused:false,traveling:false,currentBlock:null,currentTravel:null,blocks:[],travels:[],entries:[],corrections:[],dayStartedAt:null,dayEndedAt:null,sites:['ESA Freiberg – Hauptbaustelle','Baustelle Musterstraße'],selectedSite:'ESA Freiberg – Hauptbaustelle'};let state={...defaults,...JSON.parse(localStorage.getItem(key)||'{}')};['blocks','travels','entries','corrections'].forEach(k=>state[k]=Array.isArray(state[k])?state[k]:[]);state.sites=Array.isArray(state.sites)&&state.sites.length?state.sites:defaults.sites;const save=()=>localStorage.setItem(key,JSON.stringify(state)),fmt=t=>new Date(t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}),dur=ms=>{const s=Math.floor(Math.max(ms,0)/1000);return[Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(v=>String(v).padStart(2,'0')).join(':')},short=ms=>{const m=Math.floor(Math.max(ms,0)/60000);return`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`};
+function pauseMs(){return state.currentBlock?state.currentBlock.pauseMs+(state.paused&&state.currentBlock.pauseStartedAt?Date.now()-state.currentBlock.pauseStartedAt:0):0}function workMs(){return state.currentBlock?Math.max(Date.now()-state.currentBlock.startedAt-pauseMs()-(state.currentBlock.travelMs||0),0):0}function blockMs(b){return Math.max(b.endedAt-b.startedAt-b.pauseMs-(b.travelMs||0),0)}function totalWork(){return state.blocks.reduce((s,b)=>s+blockMs(b),0)+(state.running?workMs():0)}function totalPause(){return state.blocks.reduce((s,b)=>s+b.pauseMs,0)+(state.running?pauseMs():0)}function totalTravel(){return state.travels.reduce((s,t)=>s+(t.endedAt-t.startedAt),0)+(state.traveling?Date.now()-state.currentTravel.startedAt:0)}function presence(){if(!state.dayStartedAt)return 0;return (state.dayEndedAt||Date.now())-state.dayStartedAt}
+function options(el){el.innerHTML=state.sites.map(n=>`<option>${n}</option>`).join('')}function icon(type){return({start:'▶',stop:'■',pause:'Ⅱ',resume:'▶',travel:'🚗',arrive:'📍',correction:'✎'})[type]||'•'}
+function render(){options($('site'));options($('travelSite'));$('site').value=state.selectedSite;$('elapsed').textContent=dur(state.traveling?Date.now()-state.currentTravel.startedAt:state.running?workMs():0);$('travelTime').textContent=state.traveling?dur(Date.now()-state.currentTravel.startedAt):'00:00:00';$('startStop').textContent=state.running?'Arbeitsblock beenden':'Arbeitsblock starten';$('pause').disabled=!state.running||state.traveling;$('pause').textContent=state.paused?'Pause beenden':'Pause beginnen';$('travel').disabled=!state.running||state.paused||state.traveling;$('travelBox').classList.toggle('hidden',!state.traveling);$('site').disabled=state.running;$('addSite').disabled=state.running;$('useSuggested').disabled=state.running;$('stateBadge').textContent=state.traveling?'Fahrt':state.running?(state.paused?'Pause':'Läuft'):'Nicht gestartet';$('stateTitle').textContent=state.traveling?'Fahrt zur nächsten Baustelle':state.running?(state.paused?'Pause aktiv':state.currentBlock.site):'Neuen Arbeitsblock starten';$('dayWork').textContent=short(totalWork());$('dayPause').textContent=short(totalPause());$('dayTravel').textContent=short(totalTravel());$('dayPresence').textContent=short(presence());$('entries').innerHTML=state.entries.length?state.entries.slice().reverse().map(e=>`<div class="event"><div class="icon">${icon(e.type)}</div><div><strong>${e.label}</strong><small>${e.site||''}</small></div><span>${fmt(e.at)}</span></div>`).join(''):'<p class="muted">Noch keine Buchung.</p>';$('corrections').innerHTML=state.corrections.length?'<h3>Meine Anträge</h3>'+state.corrections.slice().reverse().map(c=>`<div class="correction"><strong>${c.time} Uhr · ${c.reason}</strong><small class="muted">Status: ${c.status}</small><div>${c.comment||''}</div></div>`).join(''):''}
+$('site').onchange=()=>{state.selectedSite=$('site').value;save()};$('useSuggested').onclick=()=>{state.selectedSite=$('suggestedSite').textContent;save();render()};$('addSite').onclick=()=>{$('newSiteBox').classList.toggle('hidden')};$('saveSite').onclick=()=>{const n=$('newSiteName').value.trim();if(!n)return;if(!state.sites.includes(n))state.sites.push(n);state.selectedSite=n;$('newSiteName').value='';$('newSiteBox').classList.add('hidden');save();render()};
+$('startStop').onclick=()=>{const now=Date.now();if(!state.running){state.running=true;state.paused=false;state.dayStartedAt=state.dayStartedAt||now;state.dayEndedAt=null;state.currentBlock={startedAt:now,endedAt:null,pauseMs:0,pauseStartedAt:null,travelMs:0,site:state.selectedSite};state.entries.push({type:'start',label:'Arbeitsblock begonnen',site:state.selectedSite,at:now})}else{if(state.traveling)return alert('Bitte zuerst die Ankunft bestätigen.');if(state.paused&&state.currentBlock.pauseStartedAt)state.currentBlock.pauseMs+=now-state.currentBlock.pauseStartedAt;state.currentBlock.endedAt=now;state.blocks.push({...state.currentBlock});state.entries.push({type:'stop',label:'Arbeitsblock beendet',site:state.currentBlock.site,at:now});state.running=false;state.paused=false;state.currentBlock=null;state.dayEndedAt=now}save();render()};
+$('pause').onclick=()=>{if(!state.running||state.traveling)return;const now=Date.now();if(!state.paused){state.paused=true;state.currentBlock.pauseStartedAt=now;state.entries.push({type:'pause',label:'Pause begonnen',site:state.currentBlock.site,at:now})}else{state.currentBlock.pauseMs+=now-state.currentBlock.pauseStartedAt;state.paused=false;state.currentBlock.pauseStartedAt=null;state.entries.push({type:'resume',label:'Pause beendet',site:state.currentBlock.site,at:now})}save();render()};
+$('travel').onclick=()=>{const now=Date.now();state.traveling=true;state.currentTravel={startedAt:now,from:state.currentBlock.site};state.entries.push({type:'travel',label:'Fahrt begonnen',site:state.currentBlock.site,at:now});save();render()};$('arrive').onclick=()=>{if(!state.traveling)return;const now=Date.now(),to=$('travelSite').value,ms=now-state.currentTravel.startedAt;state.currentTravel.endedAt=now;state.currentTravel.to=to;state.travels.push({...state.currentTravel});state.currentBlock.travelMs=(state.currentBlock.travelMs||0)+ms;state.currentBlock.site=to;state.selectedSite=to;state.traveling=false;state.entries.push({type:'arrive',label:'Ankunft bestätigt',site:to,at:now});state.currentTravel=null;save();render()};
+$('submitCorrection').onclick=()=>{const time=$('correctionTime').value,comment=$('correctionComment').value.trim();if(!time)return alert('Bitte gewünschte Uhrzeit angeben.');state.corrections.push({time,reason:$('correctionReason').value,comment,status:'Offen',createdAt:Date.now()});state.entries.push({type:'correction',label:'Zeitkorrektur beantragt',site:$('correctionReason').value,at:Date.now()});$('correctionTime').value='';$('correctionComment').value='';save();render()};$('reset').onclick=()=>{if(confirm('Alle lokalen Testdaten löschen?')){localStorage.removeItem(key);location.reload()}};setInterval(render,1000);render()})();
+</script></body></html>
