@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#e30613">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+  <title>ESA Zeiterfassung</title>
+  <style>
+    :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111;background:#f5f5f7}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(180deg,#fff 0,#f5f5f7 100%)}
+    main{max-width:520px;margin:0 auto;padding:24px 18px 48px}.card{background:#fff;border-radius:28px;padding:24px;box-shadow:0 18px 48px rgba(0,0,0,.10);margin-bottom:18px}
+    .brand{display:flex;align-items:center;gap:16px}.logo{width:64px;height:64px;border-radius:18px;background:#111;color:#fff;display:grid;place-items:center;font-weight:800;font-size:24px}.eyebrow{letter-spacing:.16em;text-transform:uppercase;color:#6e6e73;font-weight:700;margin:0 0 4px}.brand h1{font-size:38px;margin:0}.muted{color:#6e6e73}.status{font-size:30px;font-weight:800;margin:8px 0}.time{font-variant-numeric:tabular-nums;font-size:52px;font-weight:800;margin:8px 0 18px}
+    button,select,input{width:100%;font:inherit;border-radius:18px;border:1px solid #d2d2d7;padding:16px}button{border:0;background:#e30613;color:#fff;font-weight:800;font-size:20px;min-height:58px;touch-action:manipulation}button.secondary{background:#f2f2f7;color:#111;margin-top:12px}button.small{width:auto;min-height:48px;padding:10px 16px;font-size:18px}button:disabled{opacity:.45}button:active{transform:scale(.99)}
+    label{display:block;font-weight:700;margin:14px 0 8px}.row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}.entry{display:flex;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid #ececf0}.entry:last-child{border-bottom:0}.entry small{display:block;color:#6e6e73;margin-top:4px}.badge{display:inline-block;background:#fff0f0;color:#b60000;border-radius:999px;padding:6px 10px;font-weight:700}.suggestion{padding:14px;border-radius:18px;background:#f7f7f9;margin:12px 0}.suggestion strong{display:block;margin-bottom:4px}.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}.stat{background:#f7f7f9;border-radius:18px;padding:16px}.stat span{display:block;color:#6e6e73;font-size:14px}.stat strong{font-size:24px;font-variant-numeric:tabular-nums}.hidden{display:none!important}
+  </style>
+</head>
+<body>
+<main>
+  <section class="card">
+    <div class="brand"><div class="logo">ESA</div><div><p class="eyebrow">Zeiterfassung</p><h1>ESA</h1></div></div>
+    <p class="muted">Stabile mobile Testversion.</p>
+  </section>
+
+  <section class="card">
+    <span class="badge" id="stateBadge">Nicht gestartet</span>
+    <p class="status" id="stateTitle">Arbeitstag bereit</p>
+    <div class="time" id="elapsed">00:00:00</div>
+
+    <div class="suggestion">
+      <strong>Heute vorgeschlagen</strong>
+      <span id="suggestedSite">ESA Freiberg – Hauptbaustelle</span>
+      <button id="useSuggested" class="secondary" type="button">Vorschlag übernehmen</button>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="site">Baustelle</label>
+        <select id="site"></select>
+      </div>
+      <button id="addSite" class="small secondary" type="button" aria-label="Neue Baustelle anlegen">＋</button>
+    </div>
+
+    <div id="newSiteBox" class="hidden">
+      <label for="newSiteName">Neue Baustelle</label>
+      <input id="newSiteName" placeholder="Name oder Adresse">
+      <button id="saveSite" class="secondary" type="button">Baustelle speichern</button>
+    </div>
+
+    <button id="startStop" type="button">Arbeitsblock starten</button>
+    <button id="pause" class="secondary" type="button" disabled>Pause beginnen</button>
+  </section>
+
+  <section class="card">
+    <p class="eyebrow">Heute</p>
+    <h2>Tagesübersicht</h2>
+    <div class="stats">
+      <div class="stat"><span>Arbeitszeit netto</span><strong id="dayWork">00:00</strong></div>
+      <div class="stat"><span>Pausen</span><strong id="dayPause">00:00</strong></div>
+      <div class="stat"><span>Arbeitsblöcke</span><strong id="blockCount">0</strong></div>
+      <div class="stat"><span>Baustellen</span><strong id="siteCount">0</strong></div>
+    </div>
+    <h2>Buchungen</h2>
+    <div id="entries"><p class="muted">Noch keine Buchung.</p></div>
+    <button id="reset" class="secondary" type="button">Testdaten zurücksetzen</button>
+  </section>
+</main>
+<script>
+(() => {
+  'use strict';
+  const key='esa.standalone.v3';
+  const $=id=>document.getElementById(id);
+  const defaults={
+    running:false,paused:false,currentBlock:null,
+    blocks:[],entries:[],
+    sites:['ESA Freiberg – Hauptbaustelle','Baustelle Musterstraße'],
+    selectedSite:'ESA Freiberg – Hauptbaustelle'
+  };
+  let state={...defaults,...JSON.parse(localStorage.getItem(key)||'{}')};
+  state.blocks=Array.isArray(state.blocks)?state.blocks:[];
+  state.entries=Array.isArray(state.entries)?state.entries:[];
+  state.sites=Array.isArray(state.sites)&&state.sites.length?state.sites:defaults.sites;
+  const save=()=>localStorage.setItem(key,JSON.stringify(state));
+  const fmt=t=>new Date(t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  const duration=ms=>{const s=Math.floor(Math.max(ms,0)/1000);return [Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(v=>String(v).padStart(2,'0')).join(':')};
+  const shortDuration=ms=>{const m=Math.floor(Math.max(ms,0)/60000);return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`};
+
+  function currentPauseMs(){
+    if(!state.currentBlock)return 0;
+    return state.currentBlock.pauseMs+(state.paused&&state.currentBlock.pauseStartedAt?Date.now()-state.currentBlock.pauseStartedAt:0);
+  }
+  function currentWorkMs(){
+    if(!state.currentBlock)return 0;
+    return Math.max(Date.now()-state.currentBlock.startedAt-currentPauseMs(),0);
+  }
+  function blockWorkMs(block){return Math.max((block.endedAt-block.startedAt)-block.pauseMs,0)}
+  function totalWorkMs(){return state.blocks.reduce((sum,b)=>sum+blockWorkMs(b),0)+(state.running?currentWorkMs():0)}
+  function totalPauseMs(){return state.blocks.reduce((sum,b)=>sum+b.pauseMs,0)+(state.running?currentPauseMs():0)}
+
+  function renderSites(){
+    const previous=state.selectedSite;
+    $('site').innerHTML=state.sites.map(name=>`<option value="${name.replace(/"/g,'&quot;')}">${name}</option>`).join('');
+    $('site').value=state.sites.includes(previous)?previous:state.sites[0];
+    state.selectedSite=$('site').value;
+  }
+
+  function render(){
+    $('elapsed').textContent=duration(state.running?currentWorkMs():0);
+    $('startStop').textContent=state.running?'Arbeitsblock beenden':'Arbeitsblock starten';
+    $('pause').disabled=!state.running;
+    $('pause').textContent=state.paused?'Pause beenden':'Pause beginnen';
+    $('site').disabled=state.running;
+    $('addSite').disabled=state.running;
+    $('useSuggested').disabled=state.running;
+    $('stateBadge').textContent=state.running?(state.paused?'Pause':'Läuft'):'Nicht gestartet';
+    $('stateTitle').textContent=state.running?(state.paused?'Pause aktiv':state.currentBlock.site):'Neuen Arbeitsblock starten';
+    $('dayWork').textContent=shortDuration(totalWorkMs());
+    $('dayPause').textContent=shortDuration(totalPauseMs());
+    $('blockCount').textContent=String(state.blocks.length+(state.running?1:0));
+    const usedSites=new Set(state.blocks.map(b=>b.site));if(state.currentBlock)usedSites.add(state.currentBlock.site);
+    $('siteCount').textContent=String(usedSites.size);
+    $('entries').innerHTML=state.entries.length?state.entries.slice().reverse().map(e=>`<div class="entry"><div><strong>${e.label}</strong><small>${e.site||''}</small></div><span>${fmt(e.at)}</span></div>`).join(''):'<p class="muted">Noch keine Buchung.</p>';
+  }
+
+  $('site').addEventListener('change',()=>{state.selectedSite=$('site').value;save();});
+  $('useSuggested').addEventListener('click',()=>{state.selectedSite=$('suggestedSite').textContent;$('site').value=state.selectedSite;save();render();});
+  $('addSite').addEventListener('click',()=>{$('newSiteBox').classList.toggle('hidden');if(!$('newSiteBox').classList.contains('hidden'))$('newSiteName').focus();});
+  $('saveSite').addEventListener('click',()=>{const name=$('newSiteName').value.trim();if(!name)return;if(!state.sites.includes(name))state.sites.push(name);state.selectedSite=name;$('newSiteName').value='';$('newSiteBox').classList.add('hidden');renderSites();save();render();});
+
+  $('startStop').addEventListener('click',()=>{
+    const now=Date.now();
+    if(!state.running){
+      state.running=true;state.paused=false;
+      state.currentBlock={startedAt:now,endedAt:null,pauseMs:0,pauseStartedAt:null,site:state.selectedSite};
+      state.entries.push({label:'Arbeitsblock begonnen',site:state.selectedSite,at:now});
+    }else{
+      if(state.paused&&state.currentBlock.pauseStartedAt){state.currentBlock.pauseMs+=now-state.currentBlock.pauseStartedAt;}
+      state.currentBlock.endedAt=now;state.currentBlock.pauseStartedAt=null;
+      state.blocks.push({...state.currentBlock});
+      state.entries.push({label:'Arbeitsblock beendet',site:state.currentBlock.site,at:now});
+      state.running=false;state.paused=false;state.currentBlock=null;
+    }
+    save();render();
+  });
+
+  $('pause').addEventListener('click',()=>{
+    if(!state.running)return;const now=Date.now();
+    if(!state.paused){state.paused=true;state.currentBlock.pauseStartedAt=now;state.entries.push({label:'Pause begonnen',site:state.currentBlock.site,at:now});}
+    else{state.currentBlock.pauseMs+=now-state.currentBlock.pauseStartedAt;state.paused=false;state.currentBlock.pauseStartedAt=null;state.entries.push({label:'Pause beendet',site:state.currentBlock.site,at:now});}
+    save();render();
+  });
+
+  $('reset').addEventListener('click',()=>{if(confirm('Alle lokalen Testdaten löschen?')){localStorage.removeItem(key);location.reload();}});
+  renderSites();setInterval(render,1000);render();
+})();
+</script>
+</body>
+</html>
