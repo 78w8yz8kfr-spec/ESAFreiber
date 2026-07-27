@@ -1,10 +1,34 @@
 (() => {
-  const VERSION = "0.29.0-esa.2";
+  const VERSION = "0.29.0-esa.3";
   const queryMode = new URLSearchParams(window.location.search).get("mode");
   const demoMode = queryMode === "demo" || (
     queryMode !== "live"
     && (window.location.hostname.endsWith("github.io") || window.location.port === "4173")
   );
+
+  async function clearBrokenOfflineCacheOnce() {
+    const cleanupKey = `esa-cache-cleanup-${VERSION}`;
+    if (window.sessionStorage.getItem(cleanupKey) === "done") return;
+
+    try {
+      if ("serviceWorker" in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((registration) => registration.unregister()));
+      }
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(
+          keys
+            .filter((key) => key.startsWith("esa-") || key.startsWith("schaefchen-"))
+            .map((key) => caches.delete(key))
+        );
+      }
+    } catch (error) {
+      console.warn("ESA-Cache konnte nicht vollständig bereinigt werden.", error);
+    } finally {
+      window.sessionStorage.setItem(cleanupKey, "done");
+    }
+  }
 
   function hideElement(element) {
     if (!element) return;
@@ -48,13 +72,11 @@
     applyModuleVisibility();
   }
 
-  const configScript = document.createElement("script");
-  configScript.src = `./esa-config.js?v=${encodeURIComponent(VERSION)}`;
-  configScript.onload = () => {
-    applyEsaUi();
-    const observer = new MutationObserver(applyEsaUi);
-    observer.observe(document.body, { childList: true, subtree: true });
-  };
-  configScript.onerror = applyBranding;
-  document.head.append(configScript);
+  clearBrokenOfflineCacheOnce().finally(() => {
+    const configScript = document.createElement("script");
+    configScript.src = `./esa-config.js?v=${encodeURIComponent(VERSION)}`;
+    configScript.onload = applyEsaUi;
+    configScript.onerror = applyBranding;
+    document.head.append(configScript);
+  });
 })();
