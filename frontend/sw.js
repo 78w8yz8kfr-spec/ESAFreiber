@@ -1,11 +1,11 @@
-const CACHE_NAME = "esa-online-v29-2";
+const CACHE_NAME = "esa-online-v29-3";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css?v=0.29.0",
   "./app.js?v=0.29.0",
-  "./version.js?v=0.29.0-esa.2",
-  "./esa-config.js?v=0.29.0-esa.2",
+  "./version.js?v=0.29.0",
+  "./esa-config.js?v=0.29.0-esa.3",
   "./manifest.webmanifest",
   "./assets/mark.svg",
   "./assets/company-logos/schaaf-elektro.webp",
@@ -13,9 +13,7 @@ const APP_SHELL = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
   self.skipWaiting();
 });
 
@@ -29,48 +27,39 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") {
-    return;
-  }
+  if (event.request.method !== "GET") return;
 
   const requestUrl = new URL(event.request.url);
-  if (requestUrl.origin !== self.location.origin) {
-    return;
-  }
-  if (requestUrl.pathname.startsWith("/api/") || requestUrl.pathname === "/health") {
-    return;
-  }
+  if (requestUrl.origin !== self.location.origin) return;
+  if (requestUrl.pathname.startsWith("/api/") || requestUrl.pathname === "/health") return;
 
-  if (event.request.mode === "navigate" || requestUrl.pathname === "/" || requestUrl.pathname.endsWith(".html")) {
+  const isPageOrCode =
+    event.request.mode === "navigate"
+    || requestUrl.pathname.endsWith(".html")
+    || requestUrl.pathname.endsWith(".js")
+    || requestUrl.pathname.endsWith(".css");
+
+  if (isPageOrCode) {
     event.respondWith(
       fetch(event.request, { cache: "no-store" })
         .then((response) => {
           if (response?.status === 200) {
             const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", copy));
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           }
           return response;
         })
-        .catch(() => caches.match("./index.html"))
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match("./index.html")))
     );
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) {
-        return cached;
-      }
-
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type === "opaque") {
-          return response;
-        }
-
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        return response;
-      });
-    })
+    caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
+      if (!response || response.status !== 200 || response.type === "opaque") return response;
+      const copy = response.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+      return response;
+    }))
   );
 });
