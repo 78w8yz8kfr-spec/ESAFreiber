@@ -11,27 +11,45 @@
     *{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(180deg,#fff 0,#f5f5f7 100%)}
     main{max-width:520px;margin:0 auto;padding:24px 18px 48px}.card{background:#fff;border-radius:28px;padding:24px;box-shadow:0 18px 48px rgba(0,0,0,.10);margin-bottom:18px}
     .brand{display:flex;align-items:center;gap:16px}.logo{width:64px;height:64px;border-radius:18px;background:#111;color:#fff;display:grid;place-items:center;font-weight:800;font-size:24px}.eyebrow{letter-spacing:.16em;text-transform:uppercase;color:#6e6e73;font-weight:700;margin:0 0 4px}.brand h1{font-size:38px;margin:0}.muted{color:#6e6e73}.status{font-size:30px;font-weight:800;margin:8px 0}.time{font-variant-numeric:tabular-nums;font-size:52px;font-weight:800;margin:8px 0 18px}
-    button,select,input{width:100%;font:inherit;border-radius:18px;border:1px solid #d2d2d7;padding:16px}button{border:0;background:#e30613;color:#fff;font-weight:800;font-size:20px;min-height:58px;touch-action:manipulation}button.secondary{background:#f2f2f7;color:#111;margin-top:12px}button:active{transform:scale(.99)}
-    label{display:block;font-weight:700;margin:14px 0 8px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.entry{display:flex;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid #ececf0}.entry:last-child{border-bottom:0}.badge{display:inline-block;background:#fff0f0;color:#b60000;border-radius:999px;padding:6px 10px;font-weight:700}.hidden{display:none!important}
+    button,select,input{width:100%;font:inherit;border-radius:18px;border:1px solid #d2d2d7;padding:16px;background:#fff}button{border:0;background:#e30613;color:#fff;font-weight:800;font-size:19px;min-height:58px;touch-action:manipulation}button.secondary{background:#f2f2f7;color:#111;margin-top:12px}button:disabled{opacity:.45}button:active{transform:scale(.99)}
+    label{display:block;font-weight:700;margin:14px 0 8px}.entry{display:flex;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid #ececf0}.entry:last-child{border-bottom:0}.entry div{min-width:0}.entry small{display:block;color:#6e6e73;margin-top:3px}.badge{display:inline-block;background:#fff0f0;color:#b60000;border-radius:999px;padding:6px 10px;font-weight:700}.suggestion{border:2px solid #e30613;border-radius:20px;padding:14px;margin:12px 0;background:#fff8f8}.suggestion strong{display:block}.hidden{display:none!important}.message{min-height:22px;color:#b60000;font-weight:700}.site-row{display:flex;gap:10px;align-items:center}.site-row select{flex:1}.site-row button{width:auto;min-height:54px;padding:12px 16px;font-size:16px}.new-site{margin-top:12px;padding-top:8px}
   </style>
 </head>
 <body>
 <main>
   <section class="card">
     <div class="brand"><div class="logo">ESA</div><div><p class="eyebrow">Zeiterfassung</p><h1>ESA</h1></div></div>
-    <p class="muted">Unabhängige Testversion ohne alten Schäfchen-Code und ohne Service Worker.</p>
+    <p class="muted">Stabile Arbeitsversion · Daten bleiben auf diesem Gerät gespeichert.</p>
+  </section>
+
+  <section class="card">
+    <p class="eyebrow">Einsatzplanung</p>
+    <h2>Heutiger Vorschlag</h2>
+    <div class="suggestion">
+      <strong id="suggestedSite">ESA Freiberg – Hauptbaustelle</strong>
+      <span class="muted">Aus dem heutigen Baustellenplan vorgeschlagen</span>
+    </div>
+    <button id="useSuggestion" class="secondary" type="button">Vorgeschlagene Baustelle wählen</button>
   </section>
 
   <section class="card">
     <span class="badge" id="stateBadge">Nicht gestartet</span>
     <p class="status" id="stateTitle">Arbeitstag bereit</p>
     <div class="time" id="elapsed">00:00:00</div>
-    <label for="site">Baustelle</label>
-    <select id="site">
-      <option>ESA Freiberg – Hauptbaustelle</option>
-      <option>Baustelle Musterstraße</option>
-      <option>Andere Baustelle</option>
-    </select>
+
+    <label for="site">Baustelle auswählen</label>
+    <div class="site-row">
+      <select id="site"></select>
+      <button id="showNewSite" class="secondary" type="button" aria-label="Neue Baustelle anlegen">＋</button>
+    </div>
+
+    <div id="newSitePanel" class="new-site hidden">
+      <label for="newSiteName">Neue Baustelle</label>
+      <input id="newSiteName" maxlength="100" placeholder="z. B. Bahnhofstraße 12">
+      <button id="saveNewSite" class="secondary" type="button">Baustelle speichern und auswählen</button>
+    </div>
+    <p id="message" class="message" aria-live="polite"></p>
+
     <button id="startStop" type="button">Arbeitstag starten</button>
     <button id="pause" class="secondary" type="button" disabled>Pause beginnen</button>
   </section>
@@ -46,34 +64,76 @@
 <script>
 (() => {
   'use strict';
-  const key='esa.standalone.v1';
+  const key='esa.standalone.v2';
+  const sitesKey='esa.sites.v1';
+  const suggested='ESA Freiberg – Hauptbaustelle';
   const $=id=>document.getElementById(id);
-  let state=JSON.parse(localStorage.getItem(key)||'{"running":false,"paused":false,"startedAt":null,"pauseStartedAt":null,"pauseMs":0,"entries":[]}');
+  const defaultState={running:false,paused:false,startedAt:null,endedAt:null,pauseStartedAt:null,pauseMs:0,currentSite:'',entries:[]};
+  let state={...defaultState,...JSON.parse(localStorage.getItem(key)||'{}')};
+  let sites=JSON.parse(localStorage.getItem(sitesKey)||'null')||[suggested,'Baustelle Musterstraße'];
   const save=()=>localStorage.setItem(key,JSON.stringify(state));
+  const saveSites=()=>localStorage.setItem(sitesKey,JSON.stringify(sites));
   const fmt=t=>new Date(t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  const escapeHtml=value=>String(value).replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
   function workedMs(){if(!state.startedAt)return 0;const end=state.running?Date.now():(state.endedAt||Date.now());let ms=end-state.startedAt-state.pauseMs;if(state.paused&&state.pauseStartedAt)ms-=Date.now()-state.pauseStartedAt;return Math.max(ms,0)}
   function duration(ms){const s=Math.floor(ms/1000);return [Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(v=>String(v).padStart(2,'0')).join(':')}
+  function renderSites(){
+    $('site').innerHTML=sites.map(site=>`<option value="${escapeHtml(site)}">${escapeHtml(site)}</option>`).join('');
+    const selected=state.currentSite&&sites.includes(state.currentSite)?state.currentSite:sites[0];
+    $('site').value=selected;
+    $('site').disabled=state.running;
+    $('showNewSite').disabled=state.running;
+  }
   function render(){
     $('elapsed').textContent=duration(workedMs());
     $('startStop').textContent=state.running?'Feierabend':'Arbeitstag starten';
     $('pause').disabled=!state.running;
     $('pause').textContent=state.paused?'Pause beenden':'Pause beginnen';
     $('stateBadge').textContent=state.running?(state.paused?'Pause':'Läuft'):'Nicht gestartet';
-    $('stateTitle').textContent=state.running?(state.paused?'Pause aktiv':'Arbeitstag läuft'):'Arbeitstag bereit';
-    $('entries').innerHTML=state.entries.length?state.entries.map(e=>`<div class="entry"><strong>${e.label}</strong><span>${fmt(e.at)}</span></div>`).join(''):'<p class="muted">Noch keine Buchung.</p>';
+    $('stateTitle').textContent=state.running?(state.paused?'Pause aktiv':state.currentSite):'Arbeitstag bereit';
+    $('entries').innerHTML=state.entries.length?state.entries.map(e=>`<div class="entry"><div><strong>${escapeHtml(e.label)}</strong>${e.site?`<small>${escapeHtml(e.site)}</small>`:''}</div><span>${fmt(e.at)}</span></div>`).join(''):'<p class="muted">Noch keine Buchung.</p>';
+    renderSites();
   }
+  $('useSuggestion').addEventListener('click',()=>{
+    if(state.running)return;
+    $('site').value=suggested;
+    $('message').textContent='Vorgeschlagene Baustelle ausgewählt.';
+  });
+  $('showNewSite').addEventListener('click',()=>{
+    $('newSitePanel').classList.toggle('hidden');
+    if(!$('newSitePanel').classList.contains('hidden'))$('newSiteName').focus();
+  });
+  $('saveNewSite').addEventListener('click',()=>{
+    const name=$('newSiteName').value.trim();
+    if(!name){$('message').textContent='Bitte einen Baustellennamen eingeben.';return;}
+    if(!sites.includes(name)){sites.push(name);saveSites();}
+    state.currentSite=name;save();
+    $('newSiteName').value='';$('newSitePanel').classList.add('hidden');$('message').textContent='Baustelle wurde angelegt und ausgewählt.';render();
+  });
   $('startStop').addEventListener('click',()=>{
-    if(!state.running){state={...state,running:true,paused:false,startedAt:Date.now(),endedAt:null,pauseStartedAt:null,pauseMs:0,entries:[...state.entries,{label:'Arbeitsbeginn',at:Date.now()}]};}
-    else{if(state.paused&&state.pauseStartedAt)state.pauseMs+=Date.now()-state.pauseStartedAt;state.running=false;state.paused=false;state.endedAt=Date.now();state.pauseStartedAt=null;state.entries.push({label:'Feierabend',at:Date.now()});}
+    if(!state.running){
+      const site=$('site').value;
+      if(!site){$('message').textContent='Bitte zuerst eine Baustelle auswählen.';return;}
+      const now=Date.now();
+      state={...state,running:true,paused:false,startedAt:now,endedAt:null,pauseStartedAt:null,pauseMs:0,currentSite:site,entries:[...state.entries,{label:'Arbeitsbeginn',site,at:now}]};
+      $('message').textContent='';
+    } else {
+      const now=Date.now();
+      if(state.paused&&state.pauseStartedAt)state.pauseMs+=now-state.pauseStartedAt;
+      state.running=false;state.paused=false;state.endedAt=now;state.pauseStartedAt=null;state.entries.push({label:'Feierabend',site:state.currentSite,at:now});
+    }
     save();render();
   });
   $('pause').addEventListener('click',()=>{
     if(!state.running)return;
-    if(!state.paused){state.paused=true;state.pauseStartedAt=Date.now();state.entries.push({label:'Pause begonnen',at:Date.now()});}
-    else{state.pauseMs+=Date.now()-state.pauseStartedAt;state.paused=false;state.pauseStartedAt=null;state.entries.push({label:'Pause beendet',at:Date.now()});}
+    const now=Date.now();
+    if(!state.paused){state.paused=true;state.pauseStartedAt=now;state.entries.push({label:'Pause begonnen',site:state.currentSite,at:now});}
+    else{state.pauseMs+=now-state.pauseStartedAt;state.paused=false;state.pauseStartedAt=null;state.entries.push({label:'Pause beendet',site:state.currentSite,at:now});}
     save();render();
   });
-  $('reset').addEventListener('click',()=>{localStorage.removeItem(key);location.reload();});
+  $('site').addEventListener('change',()=>{if(!state.running){state.currentSite=$('site').value;save();}});
+  $('reset').addEventListener('click',()=>{localStorage.removeItem(key);localStorage.removeItem(sitesKey);location.reload();});
+  $('suggestedSite').textContent=suggested;
   setInterval(render,1000);render();
 })();
 </script>
