@@ -1,7 +1,7 @@
 {
-  "name": "Schäfchen",
-  "short_name": "Schäfchen",
-  "description": "Die einfache, offline-fähige Arbeitsapp für Elektrobetriebe.",
+  "name": "ESA",
+  "short_name": "ESA",
+  "description": "Die einfache, offline-fähige Arbeits- und Zeiterfassungsapp für ESA.",
   "lang": "de-DE",
   "start_url": "./",
   "scope": "./",
